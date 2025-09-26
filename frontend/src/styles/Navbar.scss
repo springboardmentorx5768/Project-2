@@ -1,0 +1,64 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: linear-gradient(90deg, #0077ff, #005fcc);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  .nav-logo {
+    font-size: 1.7rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: transform 0.3s ease, color 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+      color: #ffd700; // gold on hover
+    }
+  }
+
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 25px;
+
+    li {
+      a,
+      .logout-btn {
+        color: #fff;
+        text-decoration: none;
+        font-weight: 500;
+        position: relative;
+        padding: 6px 10px;
+        transition: all 0.3s ease;
+        border: none;
+        background: none;
+        cursor: pointer;
+
+        // underline animation
+        &::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          bottom: -4px;
+          width: 0%;
+          height: 2px;
+          background: #ffd700;
+          transition: width 0.3s ease;
+        }
+
+        &:hover {
+          color: #ffd700;
+          transform: translateY(-2px);
+        }
+
+        &:hover::after {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
