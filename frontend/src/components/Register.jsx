@@ -10,9 +10,11 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("employee"); // default role
+  const [securityKey, setSecurityKey] = useState(""); // state for admin security key
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    // ----------------- Validation -----------------
     if (!name.trim() || !username.trim() || !email.trim() || !password || !confirmPassword) {
       alert("All fields are required");
       return;
@@ -23,27 +25,40 @@ export default function Register() {
       return;
     }
 
+    if (role === "admin" && !securityKey.trim()) {
+      alert("Security Key is required for admin registration");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/register", {
+      // ----------------- Payload -----------------
+      const payload = {
         name: name.trim(),
         username: username.trim(),
         email: email.trim(),
         password,
-        role, // selected role
-      });
+        role,
+      };
+
+      if (role === "admin") {
+        payload.security_key = securityKey.trim();
+      }
+
+      const res = await api.post("/auth/register", payload);
 
       console.log(res.data);
       alert("Registration successful! Please login.");
 
-      // Clear form
+      // ----------------- Clear Form -----------------
       setName("");
       setUsername("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
       setRole("employee");
+      setSecurityKey("");
     } catch (err) {
       console.error(err.response?.data || err.message);
       alert(err.response?.data?.detail || "Registration failed.");
@@ -64,28 +79,24 @@ export default function Register() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-
         <input
           type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
-
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-
         <input
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-
         <input
           type="password"
           placeholder="Confirm Password"
@@ -110,6 +121,16 @@ export default function Register() {
             Admin
           </button>
         </div>
+
+        {/* Security Key input - only for admin */}
+        {role === "admin" && (
+          <input
+            type="text"
+            placeholder="Security Key"
+            value={securityKey}
+            onChange={(e) => setSecurityKey(e.target.value)}
+          />
+        )}
 
         <button
           onClick={handleRegister}

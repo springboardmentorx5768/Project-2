@@ -1,5 +1,6 @@
 import Navbar from "../../components/Navbar";
 import "../EmployeeDashboard/EmployeeDashboard.scss";
+import "../../styles/Navbar.scss"
 
 export default function EmployeeDashboard() {
   return (

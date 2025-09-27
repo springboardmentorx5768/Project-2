@@ -22,10 +22,20 @@
     font-size: 1rem;
     box-sizing: border-box;
     outline: none;
+    transition: all 0.3s ease;
 
     &:focus {
       border-color: #0077ff;
       box-shadow: 0 0 5px rgba(0, 119, 255, 0.3);
+    }
+  }
+
+  /* Security Key input styling */
+  input.security-key {
+    border-color: #ffa500;
+    &:focus {
+      border-color: #ff9800;
+      box-shadow: 0 0 5px rgba(255, 152, 0, 0.3);
     }
   }
 
@@ -104,5 +114,15 @@
   .role-selection {
     flex-direction: column;
     gap: 10px;
+  }
+
+  input {
+    font-size: 0.95rem;
+    padding: 10px 12px;
+  }
+
+  button.register-submit {
+    font-size: 0.95rem;
+    padding: 10px;
   }
 }

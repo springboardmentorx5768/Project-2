@@ -18,6 +18,11 @@ export default function Login() {
     localStorage.setItem("access_token", res.data.access_token);
     localStorage.setItem("refresh_token", res.data.refresh_token);
     localStorage.setItem("role", role);
+        // Save access token in localStorage
+    localStorage.setItem("accessToken", res.data.access_token);
+
+    // Optionally save user info
+    localStorage.setItem("user", JSON.stringify(res.data.user));
 
     alert(`${role.charAt(0).toUpperCase() + role.slice(1)} logged in successfully!`);
 

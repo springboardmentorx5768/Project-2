@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import Navbar from "../../components/Navbar";
 import "../AdminDashboard/AdminDashboard.scss";
 
-export default function AdminDashboard({ accessToken: propToken }) {
+export default function SecurityKeys({ accessToken: propToken }) {
   const [securityKeys, setSecurityKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Use token from prop or localStorage
   const accessToken = propToken || localStorage.getItem("accessToken");
 
   // Fetch all security keys
@@ -22,9 +21,7 @@ export default function AdminDashboard({ accessToken: propToken }) {
       const res = await fetch("http://127.0.0.1:8000/auth/security-keys", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!res.ok) {
-        throw new Error(`Error: ${res.status} ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`Error: ${res.status} ${res.statusText}`);
       const data = await res.json();
       setSecurityKeys(data);
     } catch (err) {
@@ -35,7 +32,7 @@ export default function AdminDashboard({ accessToken: propToken }) {
     }
   };
 
-  // Generate a new security key
+  // Generate new key
   const generateKey = async () => {
     if (!accessToken) return alert("Access token missing. Please login.");
     try {
@@ -43,12 +40,10 @@ export default function AdminDashboard({ accessToken: propToken }) {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!res.ok) {
-        throw new Error(`Error: ${res.status} ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`Error: ${res.status} ${res.statusText}`);
       const data = await res.json();
       alert(`New Security Key: ${data.security_key}`);
-      fetchKeys(); // Refresh list
+      fetchKeys(); // Refresh keys
     } catch (err) {
       console.error(err);
       alert("Failed to generate security key");
@@ -63,15 +58,13 @@ export default function AdminDashboard({ accessToken: propToken }) {
     <>
       <Navbar />
       <div className="dashboard-container">
-        <h1>Admin Dashboard</h1>
-        <p>Welcome, Admin!</p>
+        <h1>Security Keys</h1>
 
         {loading && <p>Loading security keys...</p>}
         {error && <p style={{ color: "red" }}>{error}</p>}
 
         {!loading && !error && (
           <div className="security-key-section">
-            <h2>Security Keys</h2>
             <button onClick={generateKey}>Generate New Key</button>
 
             {securityKeys.length === 0 ? (
