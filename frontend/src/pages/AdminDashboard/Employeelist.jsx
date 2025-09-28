@@ -38,7 +38,7 @@ export default function EmployeeList() {
     }
   };
 
-  const suspendEmployee = async (id, isActive) => {
+  const toggleSuspendEmployee = async (id, isActive) => {
     try {
       await axios.patch(
         `http://127.0.0.1:8000/admin/employees/${id}/suspend?suspend=${!isActive}`,
@@ -84,9 +84,9 @@ export default function EmployeeList() {
                   <td>
                     <button
                       disabled={loading}
-                      onClick={() => suspendEmployee(emp.id, emp.is_active)}
+                      onClick={() => toggleSuspendEmployee(emp.id, emp.is_active)}
                     >
-                      {emp.is_active ? "Suspend" : "Activate"}
+                      {emp.is_active ? "Suspend" : "Unsuspend"}
                     </button>
                     <button
                       disabled={loading}

@@ -38,15 +38,19 @@ export default function Navbar() {
           <li><Link to="/home">Home</Link></li>
         )}
 
-        {/* Dashboard link only for admins */}
-        {role === "admin" && <li><Link to="/dashboard">Dashboard</Link></li>}
+        {/* Admin-only links */}
+        {role === "admin" && (
+          <>
+            <li><Link to="/dashboard">Dashboard</Link></li>
+            <li><Link to="/AdminDashboard">Security Keys</Link></li>
+            <li><Link to="/employee-list">Employee List</Link></li>
+          </>
+        )}
 
-        {/* Logged in links */}
+        {/* Logged in links (common for both roles) */}
         {isLoggedIn ? (
           <>
             <li><Link to="/profile">Profile</Link></li>
-            <li><Link to="/AdminDashboard">Security Keys</Link></li>
-            <li><Link to="/employee-list">Employee List</Link></li>
             <li>
               <button onClick={handleLogout} className="logout-btn">
                 Logout

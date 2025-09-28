@@ -7,7 +7,7 @@ export default function Home() {
       <Navbar />
       <div className="home-container">
         <h1>Welcome to Bragboard</h1>
-        <p>Your dashboard for achievements, projects, and more!</p>
+        <p>Your dashboard for achievements, projects, and moore!</p>
       </div>
     </>
   );
