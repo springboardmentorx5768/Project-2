@@ -7,8 +7,8 @@ export default function EmployeeDashboard() {
     <>
       <Navbar />
       <div className="dashboard-container">
-        <h1>Employee Dashboard</h1> 
-        <p>Welcome! </p>
+        <h1>Employee Dashboard</h1>
+        <p>Welcome to IT department</p>
       </div>
     </>
   );

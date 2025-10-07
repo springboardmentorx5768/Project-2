@@ -8,12 +8,18 @@
   text-align: center;
 
   h1 {
-    margin-bottom: 25px;
-    color: #0077ff;
-    font-size: 1.8rem;
-  }
+  margin-bottom: 25px;
+  font-size: 1.8rem;
 
-  input {
+  /* Gradient text */
+  background: linear-gradient(90deg, #b92b27, #1565C0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+  input,
+  select {
     width: 100%;
     padding: 12px 15px;
     margin-bottom: 15px;
@@ -23,10 +29,11 @@
     box-sizing: border-box;
     outline: none;
     transition: all 0.3s ease;
+    background-color: #fff;
 
     &:focus {
       border-color: #0077ff;
-      box-shadow: 0 0 5px rgba(0, 119, 255, 0.3);
+      box-shadow: 0 0 5px linear-gradient(90deg, #b92b27, #1565C0)
     }
   }
 
@@ -36,6 +43,25 @@
     &:focus {
       border-color: #ff9800;
       box-shadow: 0 0 5px rgba(255, 152, 0, 0.3);
+    }
+  }
+
+  /* Department Dropdown styling */
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' fill='%230077ff' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: linear-gradient(90deg, #b92b27, #1565C0)
+    }
+
+    option {
+      color: #333;
+      background-color: #fff;
     }
   }
 
@@ -58,16 +84,16 @@
     transition: all 0.3s ease;
 
     &:hover {
-      background-color: #0077ff;
+      background-color: #1565C0;
       color: #fff;
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     &.active {
-      background-color: #4caf50;
+      background-color: #b92b27;
       color: #fff;
-      border-color: #4caf50;
+      border-color: #b92b27;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 
       &:hover {
@@ -81,7 +107,7 @@
   button.register-submit {
     width: 100%;
     padding: 12px;
-    background-color: #0077ff;
+    background: linear-gradient(90deg, #b92b27, #1565C0);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -116,7 +142,8 @@
     gap: 10px;
   }
 
-  input {
+  input,
+  select {
     font-size: 0.95rem;
     padding: 10px 12px;
   }

@@ -11,10 +11,14 @@
   text-align: center;
 
   h1 {
-    margin-bottom: 25px;
-    color: #0077ff;
-    font-size: 2rem;
-  }
+  margin-bottom: 25px;
+  font-size: 1.8rem;
+
+  /* Gradient text */
+  background: linear-gradient(90deg, #b92b27, #1565C0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
   input[type="email"],
   input[type="password"] {
@@ -36,7 +40,7 @@
       flex: 1;
       padding: 10px 20px;
       border-radius: 25px;
-      border: 1px solid #4caf50;
+      border: 1px solid #b92b27;
       background-color: #fff;
       color: #000000;
       font-weight: 500;
@@ -44,13 +48,13 @@
       transition: all 0.2s ease;
 
       &.active {
-        background-color: #4caf50;
+        background-color: #b92b27;
         color: #fff;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.238);
       }
 
       &:hover:not(.active) {
-        background-color: #e6f0ff;
+        background-color: #1565C0;
       }
     }
   }
@@ -58,7 +62,7 @@
   button.submit-btn {
     width: 100%;
     padding: 12px;
-    background-color: #0077ff;
+    background: linear-gradient(90deg, #b92b27, #1565C0);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -68,7 +72,7 @@
     transition: background-color 0.2s ease;
 
     &:hover {
-      background-color: #005fcc;
+      background-color: linear-gradient(90deg, #b92b27, #1565C0);
     }
   }
 }

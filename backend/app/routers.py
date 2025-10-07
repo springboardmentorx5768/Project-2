@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 import secrets
 from typing import Optional, List
 
-from .auth import get_current_admin_user, get_password_hash
+from .auth import get_current_admin_user, get_current_user, get_password_hash
 from . import auth, crud, schemas
 from .database import get_db
 from .models import User, SecurityKey
@@ -25,10 +25,60 @@ async def list_employees(
     current_admin: User = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Fetch all employees"""
-    result = await db.execute(select(User).where(User.role == "employee"))
+    """
+    Fetch employees based on admin's department.
+    Superadmins can see all employees.
+    Regular admins can see only employees in their department.
+    """
+    if current_admin.role == "superadmin":
+        # Superadmin sees all employees
+        query = select(User).where(User.role == "employee")
+    else:
+        # Department-wise scoping
+        query = select(User).where(
+            User.role == "employee",
+            User.department == current_admin.department
+        )
+
+    result = await db.execute(query)
     employees = result.scalars().all()
     return employees
+
+# ---------------- GET ALL ADMINS ----------------
+@admin_router.get("/admins", response_model=List[schemas.UserOut])
+async def list_admins(
+    current_admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Superadmin can view all admins"""
+    if current_admin.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Forbidden: Only superadmin can view admins")
+    
+    result = await db.execute(select(User).where(User.role == "admin"))
+    admins = result.scalars().all()
+    return admins
+
+# ---------------- DELETE ADMIN ----------------
+@admin_router.delete("/admins/{admin_id}")
+async def delete_admin(
+    admin_id: int,
+    current_admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_admin.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Forbidden: Only superadmin can delete admins")
+    
+    result = await db.execute(select(User).where(User.id == admin_id, User.role == "admin"))
+    admin = result.scalars().first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    
+    await db.delete(admin)
+    await db.commit()
+    return {"msg": "Admin deleted successfully"}
+
+
+
 
 # ---------------- DELETE EMPLOYEE ----------------
 @admin_router.delete("/employees/{emp_id}")
@@ -105,7 +155,8 @@ async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get
         email=user.email,
         hashed_password=hashed_password,
         role=user.role,
-        name=user.name
+        name=user.name,
+        department=user.department
     )
     return new_user
 
@@ -215,3 +266,38 @@ async def delete_security_key(key_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(key_obj)
     await db.commit()
     return {"msg": "Key deleted"}
+
+
+# ✅ Fetch department-wise employees (used for dropdown)
+@router.get("/department-employees")
+async def get_department_employees(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    query = await db.execute(select(User).where(User.department == current_user.department))
+    employees = query.scalars().all()
+    return [{"id": emp.id, "name": emp.name} for emp in employees]
+
+
+# ✅ Update profile details
+@router.put("/update-profile", response_model=schemas.UserOut)
+async def update_profile(
+    user_update: schemas.UpdateProfile,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = await db.execute(select(User).where(User.id == current_user.id))
+    user = query.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.joining_date = user_update.joining_date
+    user.current_project = user_update.current_project
+    user.group_members = ",".join(user_update.group_members)
+
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    return user

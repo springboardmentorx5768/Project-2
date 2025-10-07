@@ -10,12 +10,20 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("employee"); // default role
-  const [securityKey, setSecurityKey] = useState(""); // state for admin security key
+  const [securityKey, setSecurityKey] = useState(""); // admin security key
+  const [department, setDepartment] = useState(""); // new department state
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     // ----------------- Validation -----------------
-    if (!name.trim() || !username.trim() || !email.trim() || !password || !confirmPassword) {
+    if (
+      !name.trim() ||
+      !username.trim() ||
+      !email.trim() ||
+      !password ||
+      !confirmPassword ||
+      !department
+    ) {
       alert("All fields are required");
       return;
     }
@@ -40,6 +48,7 @@ export default function Register() {
         email: email.trim(),
         password,
         role,
+        department,
       };
 
       if (role === "admin") {
@@ -59,6 +68,7 @@ export default function Register() {
       setConfirmPassword("");
       setRole("employee");
       setSecurityKey("");
+      setDepartment("");
     } catch (err) {
       console.error(err.response?.data || err.message);
       alert(err.response?.data?.detail || "Registration failed.");
@@ -103,6 +113,17 @@ export default function Register() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
+
+        {/* Department Dropdown */}
+        <select
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+        >
+          <option value="">Select Department</option>
+          <option value="Human Resources">Human Resources</option>
+          <option value="Information Technology">Information Technology</option>
+          <option value="Finance">Finance</option>
+        </select>
 
         {/* Role Selection */}
         <div className="role-selection">

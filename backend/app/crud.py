@@ -12,25 +12,35 @@ async def get_user_by_email(db, email: str):
     res = await db.execute(q)
     return res.scalars().first()
 
+
 async def get_user_by_username(db, username: str):
     q = select(User).where(User.username == username)
     res = await db.execute(q)
     return res.scalars().first()
 
 
-async def create_user(db, username: str, email: str, hashed_password: str, role: str, name: str):
+# ✅ Modified function to include department
+async def create_user(
+    db: AsyncSession,
+    username: str,
+    email: str,
+    hashed_password: str,
+    role: str,
+    name: str,
+    department: str = None
+):
     new_user = User(
         username=username,
         email=email,
         password=hashed_password,
         role=role,
-        name=name
+        name=name,
+        department=department  # ✅ added field
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
     return new_user
-
 
 
 def verify_password(plain_password, hashed_password):

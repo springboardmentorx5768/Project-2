@@ -26,7 +26,8 @@ export default function EmployeeList() {
   };
 
   const deleteEmployee = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this employee?")) return;
+    if (!window.confirm("Are you sure you want to delete this employee?"))
+      return;
     try {
       await axios.delete(`http://127.0.0.1:8000/admin/employees/${id}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -70,6 +71,7 @@ export default function EmployeeList() {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Department</th> {/* ✅ New column */}
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -80,11 +82,14 @@ export default function EmployeeList() {
                   <td>{emp.id}</td>
                   <td>{emp.name}</td>
                   <td>{emp.email}</td>
+                  <td>{emp.department || "—"}</td> {/* ✅ Display department */}
                   <td>{emp.is_active ? "Active" : "Suspended"}</td>
                   <td>
                     <button
                       disabled={loading}
-                      onClick={() => toggleSuspendEmployee(emp.id, emp.is_active)}
+                      onClick={() =>
+                        toggleSuspendEmployee(emp.id, emp.is_active)
+                      }
                     >
                       {emp.is_active ? "Suspend" : "Unsuspend"}
                     </button>
