@@ -1,0 +1,51 @@
+# =========================
+# Backend (FastAPI)
+# =========================
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.log
+
+# Virtual environment folder
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.*
+
+# IDE/editor configuration files
+.vscode/
+.idea/
+
+# Testing and coverage
+.coverage
+pytest_cache/
+
+# =========================
+# Frontend (Vite + React + Tailwind)
+# =========================
+
+# Node modules and build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+
+.DS_Store
+Thumbs.db
+
+
