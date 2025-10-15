@@ -54,6 +54,59 @@ class ApiService {
     }
   }
 
+  async searchUsers({ department = 'all', search = '' }) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const params = new URLSearchParams();
+      if (department) params.append('department', department);
+      if (search) params.append('search', search);
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/users/search?${params.toString()}` , {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to search users');
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during user search');
+    }
+  }
+
+  async createShoutOutMulti({ message, recipient_ids, category, is_public = 'public' }) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const payload = { message, recipient_ids, category, is_public };
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/create-multi`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create shout-out');
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during shout-out creation');
+    }
+  }
+
   async getUserProfile() {
     try {
       const token = localStorage.getItem('access_token');

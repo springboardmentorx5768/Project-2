@@ -1,3 +1,6 @@
+import { useEffect, useMemo, useState } from 'react'
+import api from '../services/api'
+
 const MainContent = ({ activeView, selectedDepartment, user }) => {
   const renderContent = () => {
     switch (activeView) {
@@ -70,24 +73,145 @@ const ShoutOutFeed = ({ selectedDepartment, user }) => {
 
 // Create Shout-Out Component
 const CreateShoutOut = ({ user }) => {
+  const [message, setMessage] = useState('')
+  const [visibility, setVisibility] = useState('public')
+  const [search, setSearch] = useState('')
+  const [department, setDepartment] = useState('all')
+  const [results, setResults] = useState([])
+  const [selected, setSelected] = useState([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const data = await api.searchUsers({ department, search })
+        if (!cancelled) setResults(data)
+      } catch (e) {
+        if (!cancelled) setResults([])
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [department, search])
+
+  const addRecipient = (u) => {
+    if (!selected.find(x => x.id === u.id)) {
+      setSelected([...selected, u])
+    }
+  }
+
+  const removeRecipient = (id) => {
+    setSelected(selected.filter(x => x.id !== id))
+  }
+
+  const canSubmit = useMemo(() => {
+    return message.trim() && selected.length > 0
+  }, [message, selected])
+
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    if (!canSubmit) return
+    setSubmitting(true)
+    setError('')
+    setSuccess('')
+    try {
+      await api.createShoutOutMulti({
+        message: message.trim(),
+        recipient_ids: selected.map(s => s.id),
+        is_public: visibility,
+      })
+      setMessage('')
+      setSelected([])
+      setSuccess('Shout-out created successfully')
+    } catch (e) {
+      setError(e.message || 'Failed to create shout-out')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
           Create Shout-Out
         </h2>
-        
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
+
+        {error ? (
+          <div className="mb-4 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</div>
+        ) : null}
+        {success ? (
+          <div className="mb-4 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</div>
+        ) : null}
+
+        <form onSubmit={onSubmit} className="space-y-5">
+          {/* Category removed as requested */}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <textarea value={message} onChange={(e)=>setMessage(e.target.value)} rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Write your appreciation message..." />
           </div>
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">Coming Soon!</h3>
-          <p className="text-blue-700">
-            The shout-out creation form will be implemented in Week 3-4 of the project timeline.
-          </p>
-        </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+              <select value={visibility} onChange={(e)=>setVisibility(e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="public">Public</option>
+                <option value="department_only">Department Only</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search Recipients</label>
+              <div className="flex gap-2">
+                <select value={department} onChange={(e)=>setDepartment(e.target.value)} className="border rounded-lg px-2 py-2">
+                  <option value="all">All Departments</option>
+                  <option value="engineering">Engineering</option>
+                  <option value="sales">Sales</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="hr">HR</option>
+                  <option value="finance">Finance</option>
+                </select>
+                <input value={search} onChange={(e)=>setSearch(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type a name..." />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border rounded-xl p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Search Results</div>
+              <div className="max-h-40 overflow-auto divide-y">
+                {results.map(u => (
+                  <button key={u.id} type="button" onClick={()=>addRecipient(u)} className="w-full text-left px-2 py-2 hover:bg-gray-50">
+                    {u.name} <span className="text-gray-500 text-xs">({u.department})</span>
+                  </button>
+                ))}
+                {!results.length && <div className="text-gray-500 text-sm px-2 py-2">No users</div>}
+              </div>
+            </div>
+            <div className="border rounded-xl p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Selected Recipients</div>
+              <div className="flex flex-wrap gap-2">
+                {selected.map(u => (
+                  <span key={u.id} className="inline-flex items-center bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm">
+                    {u.name}
+                    <button type="button" onClick={()=>removeRecipient(u.id)} className="ml-2 text-indigo-600 hover:text-indigo-800">×</button>
+                  </span>
+                ))}
+                {!selected.length && <div className="text-gray-500 text-sm">No recipients selected</div>}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <button disabled={!canSubmit || submitting} className="bg-gradient-to-r from-indigo-500 to-purple-600 disabled:opacity-50 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
+              {submitting ? 'Submitting...' : 'Create Shout-Out'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

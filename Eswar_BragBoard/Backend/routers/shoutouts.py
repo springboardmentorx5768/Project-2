@@ -5,16 +5,23 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from database import get_db
-from models import ShoutOut, User
+from models import ShoutOut, User, ShoutOutRecipient
 from auth import get_current_user
 
 router = APIRouter(prefix="/shoutouts", tags=["shoutouts"])
 
 class ShoutOutCreate(BaseModel):
-    title: str
+    title: Optional[str] = None
     message: str
     receiver_id: int
-    category: str
+    category: Optional[str] = None
+    is_public: str = "public"
+
+class ShoutOutCreateMulti(BaseModel):
+    title: Optional[str] = None
+    message: str
+    recipient_ids: List[int]
+    category: Optional[str] = None
     is_public: str = "public"
 
 class ShoutOutResponse(BaseModel):
@@ -49,15 +56,18 @@ def create_shoutout(
     if not receiver:
         raise HTTPException(status_code=404, detail="Receiver not found")
     
+    # Derive title if not provided
+    derived_title = shoutout.title or (shoutout.message[:60].strip() or "Shout-Out")
+
     # Create shoutout
     new_shoutout = ShoutOut(
-        title=shoutout.title,
+        title=derived_title,
         message=shoutout.message,
         giver_id=current_user.id,
         receiver_id=shoutout.receiver_id,
         giver_department=current_user.department,
         receiver_department=receiver.department,
-        category=shoutout.category,
+        category=(shoutout.category or "teamwork"),
         is_public=shoutout.is_public
     )
     
@@ -77,6 +87,68 @@ def create_shoutout(
         is_public=new_shoutout.is_public,
         created_at=new_shoutout.created_at
     )
+
+@router.post("/create-multi", response_model=List[ShoutOutResponse])
+def create_shoutout_multi(
+    payload: ShoutOutCreateMulti,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a shoutout with multiple recipients. The first recipient is stored as primary for compatibility."""
+    if not payload.recipient_ids:
+        raise HTTPException(status_code=400, detail="At least one recipient is required")
+
+    # Validate recipients and collect their details
+    receivers = db.query(User).filter(User.id.in_(payload.recipient_ids)).all()
+    receiver_map = {u.id: u for u in receivers}
+    missing = [rid for rid in payload.recipient_ids if rid not in receiver_map]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Recipients not found: {missing}")
+
+    # Use first recipient as primary receiver for legacy fields
+    primary = receiver_map[payload.recipient_ids[0]]
+
+    # Derive title if not provided
+    derived_title = payload.title or (payload.message[:60].strip() or "Shout-Out")
+
+    new_shoutout = ShoutOut(
+        title=derived_title,
+        message=payload.message,
+        giver_id=current_user.id,
+        receiver_id=primary.id,
+        giver_department=current_user.department,
+        receiver_department=primary.department,
+        category=(payload.category or "teamwork"),
+        is_public=payload.is_public
+    )
+
+    db.add(new_shoutout)
+    db.flush()  # get shoutout id before adding recipients
+
+    # Add all recipients to join table (including primary)
+    for rid in payload.recipient_ids:
+        db.add(ShoutOutRecipient(shoutout_id=new_shoutout.id, recipient_id=rid))
+
+    db.commit()
+    db.refresh(new_shoutout)
+
+    responses: List[ShoutOutResponse] = []
+    for rid in payload.recipient_ids:
+        r = receiver_map[rid]
+        responses.append(ShoutOutResponse(
+            id=new_shoutout.id,
+            title=new_shoutout.title,
+            message=new_shoutout.message,
+            giver_name=current_user.name,
+            receiver_name=r.name,
+            giver_department=new_shoutout.giver_department,
+            receiver_department=r.department,
+            category=new_shoutout.category,
+            is_public=new_shoutout.is_public,
+            created_at=new_shoutout.created_at
+        ))
+
+    return responses
 
 @router.get("/feed", response_model=List[ShoutOutResponse])
 def get_shoutouts_feed(
