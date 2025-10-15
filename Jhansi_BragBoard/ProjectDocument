@@ -1,0 +1,60 @@
+                                          Infosys Springboard Internship -- BragBoard
+Week 1
+✅ Tasks Completed
+
+Set up the project structure using React (frontend) and FastAPI (backend).
+
+Created database models for users (with SQLAlchemy).
+
+Implemented user registration and login using JWT authentication for secure access.
+
+⚙️ Expected Output
+
+Fully functional authentication system (register & login).
+
+Basic database connection established.
+
+API endpoints for user auth working correctly.
+
+⚠️ Errors / Challenges Faced
+
+Faced CORS policy issues between React and FastAPI — resolved by adding proper middleware.
+
+Encountered JWT token verification errors due to incorrect secret key setup — fixed by updating environment variables.
+
+Database migration issues during model updates — solved by reinitializing the tables.
+
+Week 2
+✅ Tasks Completed
+
+Built a basic responsive layout using Tailwind CSS for the frontend.
+
+Implemented user dashboard page displayed after successful login.
+
+Set up department-wise scoping in the backend to manage user-specific data and access control.
+
+⚙️ Expected Output
+
+A functional React UI layout connected to backend APIs.
+
+Dashboard rendering user-specific information after login.
+
+Department-level data segregation on the backend.
+
+⚠️ Errors / Challenges Faced
+
+Faced alignment and layout issues while using Tailwind utility classes — fixed by reorganizing flex and grid layouts.
+
+Encountered backend data not displaying correctly due to missing API integration — resolved after proper endpoint connection.
+
+Token expiration problem during repeated API calls — added refresh handling for smoother experience.
+
+🧩 Summary
+
+By the end of Week 2, we achieved:
+
+Secure authentication flow (JWT-based).
+
+Working user dashboard with Tailwind design.
+
+Department-level backend logic integrated successfully.

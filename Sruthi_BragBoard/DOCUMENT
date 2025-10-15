@@ -1,0 +1,46 @@
+Internship Task 2 Report
+Project Name: Brag Board
+Project Title: Building a Secure Login System and Department-Wise Dashboard using React, Tailwind CSS, and FastAPI
+Submitted by: Battula Sruthi Keerthi
+Under the Guidance of: Respected Madhuri Mam
+Date: 9-10-2025
+________________________________________
+Task Objectives
+1.	Build a clean and responsive layout using Tailwind CSS.
+2.	Display the user dashboard after successful login.
+3.	Set up department-wise scoping in the backend so users can access data related only to their department.
+________________________________________
+What I Did
+In this task, I focused on creating a functional and responsive interface along with secure authentication.
+I began by designing the frontend using React and Tailwind CSS, which helped in building the login, registration, and dashboard pages with a consistent layout.
+On the backend, I used FastAPI to create APIs for user registration, login, and data access. I implemented JWT-based authentication to ensure secure login and protected routes.
+I also added department-wise scoping, so that users can access content specific to their department after logging in. Finally, I integrated the frontend and backend, tested the data flow, and ensured smooth navigation between pages.
+________________________________________
+What I Learned
+Through this task, I learned the complete workflow of a full-stack web application. My key learnings include:
+•	Setting up a React and FastAPI project structure.
+•	Using Tailwind CSS to design responsive and modern interfaces.
+•	Implementing authentication and authorization using JWT.
+•	Handling frontend routing and maintaining protected pages.
+•	Connecting frontend and backend through APIs for data exchange.
+________________________________________
+Outcome
+By completing this task, I developed a working version of Brag Board where users can register, log in, and access dashboards based on their department.
+The interface is responsive and user-friendly, and it successfully captures and displays user roles and department details securely.
+________________________________________
+Challenges Faced
+While working on this task, I faced a few challenges:
+•	CORS issues while connecting the frontend and backend, which I resolved by enabling CORS middleware.
+•	JWT validation errors, which required debugging to ensure proper token verification.
+•	Styling conflicts in Tailwind CSS during component alignment.
+•	Minor routing issues between login and dashboard pages, later fixed through React Router configuration.
+________________________________________
+Reflection
+This task helped me understand how the frontend and backend communicate in a real-world project. I gained confidence in implementing authentication systems, managing state, and designing user-friendly interfaces. It also strengthened my understanding of secure and scalable web application development.
+________________________________________
+Acknowledgment
+I would like to express my sincere gratitude to Madhuri Mam for her valuable guidance, support, and feedback throughout this task. Her mentorship helped me enhance my technical knowledge and apply it effectively in the project.
+
+Github link
+https://github.com/topics/login
+
