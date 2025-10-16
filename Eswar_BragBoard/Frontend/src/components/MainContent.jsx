@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../services/api'
 
-const MainContent = ({ activeView, selectedDepartment, user }) => {
+const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) => {
   const renderContent = () => {
     switch (activeView) {
       case 'feed':
-        return <ShoutOutFeed selectedDepartment={selectedDepartment} user={user} />
+        return <ShoutOutFeed selectedDepartment={selectedDepartment} user={user} setActiveView={setActiveView} />
       case 'create':
         return <CreateShoutOut user={user} />
       case 'my-shoutouts':
@@ -13,7 +13,7 @@ const MainContent = ({ activeView, selectedDepartment, user }) => {
       case 'analytics':
         return <Analytics user={user} />
       default:
-        return <ShoutOutFeed selectedDepartment={selectedDepartment} user={user} />
+        return <ShoutOutFeed selectedDepartment={selectedDepartment} user={user} setActiveView={setActiveView} />
     }
   }
 
@@ -27,7 +27,7 @@ const MainContent = ({ activeView, selectedDepartment, user }) => {
 }
 
 // Shout-Out Feed Component
-const ShoutOutFeed = ({ selectedDepartment, user }) => {
+const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
   return (
     <div className="space-y-6">
       {/* Feed Header */}
@@ -63,7 +63,7 @@ const ShoutOutFeed = ({ selectedDepartment, user }) => {
         <p className="text-gray-600 mb-6">
           Be the first to spread some positivity! Create a shout-out to appreciate your colleagues.
         </p>
-        <button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
+        <button onClick={() => setActiveView('create')} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
           Create Your First Shout-Out
         </button>
       </div>
@@ -127,7 +127,8 @@ const CreateShoutOut = ({ user }) => {
       setSelected([])
       setSuccess('Shout-out created successfully')
     } catch (e) {
-      setError(e.message || 'Failed to create shout-out')
+      const msg = typeof e?.message === 'string' ? e.message : (e ? JSON.stringify(e) : 'Failed to create shout-out')
+      setError(msg || 'Failed to create shout-out')
     } finally {
       setSubmitting(false)
     }
@@ -141,7 +142,7 @@ const CreateShoutOut = ({ user }) => {
         </h2>
 
         {error ? (
-          <div className="mb-4 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</div>
+          <div className="mb-4 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{typeof error === 'string' ? error : JSON.stringify(error)}</div>
         ) : null}
         {success ? (
           <div className="mb-4 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</div>

@@ -1,6 +1,28 @@
 // API service for BragBoard authentication
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
+function extractErrorMessage(errorData, fallback = 'Request failed') {
+  try {
+    if (!errorData) return fallback;
+    const detail = errorData.detail ?? errorData.message ?? errorData.error ?? errorData;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      // FastAPI validation errors come as an array of {loc,msg}
+      const msgs = detail
+        .map((d) => (typeof d === 'string' ? d : (d.msg || d.message || JSON.stringify(d))))
+        .filter(Boolean);
+      return msgs.join('; ') || fallback;
+    }
+    if (typeof detail === 'object') {
+      if (detail.msg || detail.message) return detail.msg || detail.message;
+      return JSON.stringify(detail);
+    }
+    return String(detail);
+  } catch (_) {
+    return fallback;
+  }
+}
+
 class ApiService {
   async register(userData) {
     try {
@@ -19,9 +41,10 @@ class ApiService {
       console.log('Response ok:', response.ok);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Registration failed');
         console.error('Registration error:', errorData);
-        throw new Error(errorData.detail || 'Registration failed');
+        throw new Error(msg);
       }
 
       const result = await response.json();
@@ -44,8 +67,9 @@ class ApiService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Login failed');
+        throw new Error(msg);
       }
 
       return await response.json();
@@ -70,8 +94,9 @@ class ApiService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to search users');
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to search users');
+        throw new Error(msg);
       }
 
       return await response.json();
@@ -80,12 +105,12 @@ class ApiService {
     }
   }
 
-  async createShoutOutMulti({ message, recipient_ids, category, is_public = 'public' }) {
+  async createShoutOutMulti({ message, recipient_ids, is_public = 'public' }) {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No access token found');
 
-      const payload = { message, recipient_ids, category, is_public };
+      const payload = { message, recipient_ids, is_public };
 
       const response = await fetch(`${API_BASE_URL}/shoutouts/create-multi`, {
         method: 'POST',
@@ -97,8 +122,9 @@ class ApiService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create shout-out');
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to create shout-out');
+        throw new Error(msg);
       }
 
       return await response.json();
@@ -123,8 +149,9 @@ class ApiService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to fetch user profile');
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to fetch user profile');
+        throw new Error(msg);
       }
 
       return await response.json();

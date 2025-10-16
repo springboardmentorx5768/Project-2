@@ -319,7 +319,8 @@ def search_users_by_department(
     query = db.query(User).filter(User.id != current_user.id)  # Exclude current user
     
     if department and department != "all":
-        query = query.filter(User.department == department)
+        dep = department.strip().lower()
+        query = query.filter(func.lower(User.department) == dep)
     
     if search:
         query = query.filter(User.name.ilike(f"%{search}%"))
