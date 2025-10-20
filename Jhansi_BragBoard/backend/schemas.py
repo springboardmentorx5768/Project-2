@@ -2,9 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
-# ----------------------
 # User Schemas
-# ----------------------
 class UserBase(BaseModel):
     name: str
     email: str
@@ -24,17 +22,13 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
-# ----------------------
 # Token Schema
-# ----------------------
 class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
 
-# ----------------------
 # Shoutout Schemas
-# ----------------------
 class ShoutoutBase(BaseModel):
     message: str
     recipient_ids: Optional[List[int]] = []
@@ -49,6 +43,7 @@ class ShoutoutResponse(ShoutoutBase):
     sender_role: str
     sender_department: Optional[str]
     created_at: Optional[datetime]
+    recipient_names: Optional[List[str]] = []  # <-- added for display
 
     class Config:
         from_attributes = True
