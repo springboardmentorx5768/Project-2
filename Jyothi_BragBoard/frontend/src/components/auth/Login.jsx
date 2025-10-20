@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import apiService from '../services/api';
+import apiService from '../../services/api';
 
 const Login = ({ onSuccess, onToggleMode }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -57,7 +57,7 @@ const Login = ({ onSuccess, onToggleMode }) => {
               </div>
             )}
 
-            {/* Input Stack without labels */}
+           
             <div className="space-y-4">
               <input
                 id="email"

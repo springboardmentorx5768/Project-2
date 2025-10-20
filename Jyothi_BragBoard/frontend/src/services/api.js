@@ -1,92 +1,188 @@
-// API service for BragBoard authentication
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import axios from "axios";
+
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 class ApiService {
+  getToken() {
+    return localStorage.getItem("access_token");
+  }
+
+  getHeaders() {
+    const token = this.getToken();
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  // -------------------- AUTH --------------------
   async register(userData) {
-    try {
-      console.log('Attempting registration with data:', userData);
-      console.log('API URL:', `${API_BASE_URL}/users/register`);
-      
-      const response = await fetch(`${API_BASE_URL}/users/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Registration error:', errorData);
-        throw new Error(errorData.detail || 'Registration failed');
-      }
-
-      const result = await response.json();
-      console.log('Registration successful:', result);
-      return result;
-    } catch (error) {
-      console.error('Registration fetch error:', error);
-      throw new Error(error.message || 'Network error during registration');
-    }
+    const res = await fetch(`${API_BASE_URL}/users/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Registration failed");
+    return await res.json();
   }
 
   async login(credentials) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/users/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw new Error(error.message || 'Network error during login');
-    }
+    const res = await fetch(`${API_BASE_URL}/users/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Login failed");
+    return await res.json();
   }
 
   async getUserProfile() {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('No access token found');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to fetch user profile');
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw new Error(error.message || 'Network error during profile fetch');
-    }
+    const res = await fetch(`${API_BASE_URL}/users/profile`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Failed to fetch profile");
+    return await res.json();
   }
 
-  async checkHealth() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/health`);
-      return await response.json();
-    } catch (error) {
-      throw new Error('Cannot connect to server');
-    }
+  // -------------------- GET ALL USERS --------------------
+  async getAllUsers() {
+    const res = await fetch(`${API_BASE_URL}/users/all`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to fetch users");
+    return await res.json();
+  }
+
+  // -------------------- IMAGE UPLOAD --------------------
+  async uploadImage(file) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await axios.post(`${API_BASE_URL}/shoutouts/upload-image`, formData, {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return res.data.image_url;
+  }
+
+  // -------------------- CREATE SHOUTOUT --------------------
+  async createShoutout({ title, message, receiver_id, tagged_user_ids = [], category, is_public, imageFile }) {
+    let image_url = null;
+    if (imageFile) image_url = await this.uploadImage(imageFile);
+
+    const payload = { title, message, receiver_id, tagged_user_ids, category, is_public, image_url };
+
+    const res = await axios.post(`${API_BASE_URL}/shoutouts/create`, payload, {
+      headers: { Authorization: `Bearer ${this.getToken()}` },
+    });
+
+    return res.data;
+  }
+
+  // -------------------- GET SHOUTOUTS (FEED) --------------------
+  async getShoutouts({ department = "all", skip = 0, limit = 50 } = {}) {
+    const res = await fetch(`${API_BASE_URL}/shoutouts/feed?department=${department}&skip=${skip}&limit=${limit}`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Failed to fetch shoutouts");
+    return await res.json();
+  }
+
+  // -------------------- GET MY SHOUTOUTS --------------------
+  async getMyShoutouts({ department = "all" } = {}) {
+    const res = await fetch(`${API_BASE_URL}/shoutouts/my-shoutouts?department=${department}`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Failed to fetch my shoutouts");
+    return await res.json();
+  }
+
+  // -------------------- SEARCH USERS --------------------
+  async searchUsers({ department = "all", search = "" } = {}) {
+    const res = await fetch(`${API_BASE_URL}/shoutouts/users/search?department=${department}&search=${search}`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Failed to search users");
+    return await res.json();
+  }
+
+  // -------------------- REACTIONS --------------------
+  async addReaction(shoutout_id, type) {
+    const res = await axios.post(
+      `${API_BASE_URL}/shoutouts/${shoutout_id}/reactions`,
+      { type },
+      { headers: this.getHeaders() }
+    );
+    return res.data;
+  }
+
+  async removeReaction(shoutout_id, type) {
+    const res = await axios.delete(`${API_BASE_URL}/shoutouts/${shoutout_id}/reactions`, {
+      headers: this.getHeaders(),
+      data: { type },
+    });
+    return res.data;
+  }
+
+  // -------------------- COMMENTS --------------------
+  async addComment(shoutout_id, { user_id, text }) {
+    const res = await axios.post(
+      `${API_BASE_URL}/shoutouts/${shoutout_id}/comments`,
+      { user_id, text },
+      { headers: this.getHeaders() }
+    );
+    return res.data;
+  }
+
+  async deleteComment(comment_id) {
+    const res = await axios.delete(`${API_BASE_URL}/shoutouts/comments/${comment_id}`, {
+      headers: this.getHeaders(),
+    });
+    return res.data;
+  }
+
+  async updateComment(shoutout_id, comment_id, { text }) {
+    const res = await axios.put(
+      `${API_BASE_URL}/shoutouts/${shoutout_id}/comments/${comment_id}`,
+      { text },
+      { headers: this.getHeaders() }
+    );
+    return res.data;
+  }
+
+  // -------------------- DELETE SHOUTOUT --------------------
+  async deleteShoutout(shoutout_id) {
+    const res = await axios.delete(`${API_BASE_URL}/shoutouts/${shoutout_id}`, {
+      headers: this.getHeaders(),
+    });
+    return res.data;
+  }
+
+  // -------------------- DASHBOARD --------------------
+  async getDashboardStats() {
+    const res = await fetch(`${API_BASE_URL}/shoutouts/dashboard/stats`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || "Failed to fetch dashboard stats");
+    return await res.json();
+  }
+
+  // -------------------- UPDATE USER ACCOUNT --------------------
+  async updateUser(userId, updatedData) {
+    // updating user account
+    const res = await axios.put(`${API_BASE_URL}/users/${userId}`, updatedData, {
+      headers: { Authorization: `Bearer ${this.getToken()}` },
+    });
+    return res.data;
+  }
+
+  // -------------------- DELETE USER ACCOUNT --------------------
+  async deleteUser(userId) {
+    // deleting user account
+    const res = await axios.delete(`${API_BASE_URL}/users/${userId}`, {
+      headers: { Authorization: `Bearer ${this.getToken()}` },
+    });
+    return res.data;
   }
 }
 
