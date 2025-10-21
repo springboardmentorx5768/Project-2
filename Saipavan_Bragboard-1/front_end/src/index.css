@@ -1,0 +1,7 @@
+@import "./styles/LoginPage.css";
+@import "./styles/SharedStyles.css";
+@import "./styles/Dashboard.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,0 +1,59 @@
+.dashboard-container {
+  background-color: #f1f5f9; /* Equivalent to bg-slate-100 */
+  min-height: 100vh; /* Equivalent to min-h-screen */
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr); /* Equivalent to grid-cols-12 */
+  grid-template-rows: auto 1fr; /* Equivalent to grid-rows-[auto,1fr] */
+  grid-template-areas:
+    "sidebar topbar topbar topbar"
+    "sidebar main main main";
+}
+
+.sidebar-nav {
+  grid-area: sidebar;
+  background-color: #ffffff; /* Equivalent to bg-white */
+  height: 100vh; /* Equivalent to h-screen */
+  padding: 1rem; /* Equivalent to p-4 */
+  display: none; /* Equivalent to hidden */
+}
+
+.sidebar-nav.lg {
+  display: block; /* Equivalent to lg:block */
+  padding: 1.5rem; /* Equivalent to p-6 */
+  overflow-y: auto; /* Equivalent to overflow-y-auto */
+}
+
+.topbar {
+  background-color: #ffffff; /* Equivalent to bg-white */
+  padding: 1rem; /* Equivalent to p-4 */
+  border-bottom: 1px solid #e2e8f0; /* Equivalent to border-b border-slate-200 */
+  border-radius: 0.5rem; /* Equivalent to rounded-lg */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Equivalent to shadow-sm */
+  border: 1px solid #e2e8f0; /* Equivalent to border border-slate-200 */
+  grid-area: topbar;
+}
+
+.main-content {
+  grid-area: main;
+  padding: 1.5rem; /* Equivalent to p-6 */
+  overflow-y: auto; /* Equivalent to overflow-y-auto */
+}
+
+.shoutout-card {
+  background-color: #ffffff; /* Equivalent to bg-white */
+  padding: 1.5rem; /* Equivalent to p-6 */
+  border-radius: 0.5rem; /* Equivalent to rounded-lg */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Equivalent to shadow-sm */
+  border: 1px solid #e2e8f0; /* Equivalent to border border-slate-200 */
+}
+
+.stat-card {
+  background-color: #ffffff; /* Equivalent to bg-white */
+  padding: 1rem; /* Equivalent to p-4 */
+  border-radius: 0.5rem; /* Equivalent to rounded-lg */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Equivalent to shadow-sm */
+  border: 1px solid #e2e8f0; /* Equivalent to border border-slate-200 */
+}
