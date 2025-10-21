@@ -1,0 +1,103 @@
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Make it full height */
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  padding: 1.5rem 1rem;
+}
+
+.sidebar-header {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #7c3aed; /* Brand violet color */
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
+}
+
+/* Navigation link container */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-grow: 1; /* Pushes the settings/logout to the bottom */
+}
+
+/* Slightly more compact nav that reduces the bottom spacer so the lower links sit higher */
+.sidebar-nav-compact {
+  flex-grow: 0.8; /* slightly reduce grow to pull bottom items up */
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #475569; /* Slate color */
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.nav-link:hover {
+  background-color: #f1f5f9; /* Light gray on hover */
+  color: #1e293b;
+}
+
+/* Style for the currently active link */
+.nav-link.active {
+  background-color: #ede9fe; /* Light violet */
+  color: #7c3aed; /* Brand violet */
+}
+
+.nav-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.75rem;
+}
+
+/* Prominent button for creating a shout-out */
+.create-shoutout-btn {
+  width: 100%;
+  padding: 0.75rem 0;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  color: white;
+  background-color: #7c3aed;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.create-shoutout-btn:hover {
+  background-color: #6d28d9;
+}
+
+/* Ensure button elements that use the same class get the same visual treatment
+   This makes <button class="nav-link"> look identical to <a class="nav-link"> */
+button.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #475569; /* Slate color */
+  text-decoration: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.nav-link:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+button.nav-link:focus {
+  outline: 2px solid rgba(124,58,237,0.12);
+  outline-offset: 2px;
+}

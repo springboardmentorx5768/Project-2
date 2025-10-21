@@ -1,0 +1,142 @@
+.register-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem 0; /* Add padding for smaller screens */
+  background-color: #f1f5f9;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 28rem;
+  padding: 3rem;
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.brand-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background-image: linear-gradient(to right, #06b6d4, #7c3aed);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.register-subtitle {
+  margin-top: 0.5rem;
+  color: #64748b;
+  font-size: 1.125rem;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* This new class will wrap only the icon and the input field */
+.input-wrapper {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1.25rem;
+  width: 1.25rem;
+  color: #94a3b8;
+  pointer-events: none; /* Make sure the icon isn't clickable */
+}
+
+.form-input {
+  width: 100%;
+  padding: 1rem 1rem 1rem 3.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.register-button {
+  width: 100%;
+  padding: 1rem 0;
+  font-weight: 700;
+  font-size: 1rem;
+  color: white;
+  background-color: #7c3aed;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.register-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.register-link-container {
+  text-align: center;
+  margin-top: 2rem;
+  color: #475569;
+}
+
+.register-link {
+  font-weight: 600;
+  color: #7c3aed;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+/* --- Password Strength Meter Styles --- */
+.password-strength-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; /* space-y-1 */
+  margin-top: 0.5rem; /* mt-2 */
+  font-size: 0.75rem; /* text-xs */
+}
+
+.strength-check {
+  display: flex;
+  align-items: center;
+}
+
+.strength-check svg {
+  width: 1rem; /* w-4 */
+  height: 1rem; /* h-4 */
+  margin-right: 0.5rem; /* mr-2 */
+}
+
+.strength-valid {
+  color: #16a34a; /* text-green-600 */
+}
+
+.strength-invalid {
+  color: #64748b; /* text-slate-500 */
+}

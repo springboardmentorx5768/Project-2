@@ -1,0 +1,345 @@
+/* === GLOBAL LAYOUT === */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9fafb;
+  color: #333;
+  font-family: "Inter", sans-serif;
+}
+
+/* Grid wrapper when using DashboardLayout to position sidebar, topnav and main content */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "sidebar topnav"
+    "sidebar main";
+  width: 100%;
+  min-height: 100vh;
+}
+
+.dashboard-grid > aside.sidebar {
+  grid-area: sidebar;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+/* Ensure sidebar (and its Create button) stays above main content elements */
+.dashboard-grid > aside.sidebar,
+.sidebar {
+  z-index: 60;
+}
+
+.dashboard-grid > .top-navbar {
+  grid-area: topnav;
+  align-self: start;
+  padding: 0.35rem 1rem; /* tightened further */
+}
+
+/* Make the welcome text appear slightly to the right and pinned at the top */
+.top-welcome-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.top-welcome {
+  display: inline-block;
+  font-size: 1.12rem; /* slightly larger */
+  font-weight: 700;
+  padding: 6px 12px; /* reduced padding */
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(79,70,229,0.12), rgba(99,102,241,0.06));
+  color: #0f172a;
+  box-shadow: 0 8px 20px rgba(2,6,23,0.06);
+  transform: translateY(0);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  text-align: center;
+  max-width: 80%;
+}
+
+.top-welcome:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(2,6,23,0.12);
+}
+
+/* wrapper to allow horizontal offset of welcome and placement of small action button */
+.top-welcome-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  transform: translateX(-100px); /* shift left ~100px (~25mm depending on DPI) */
+}
+
+@media (max-width: 900px) {
+  .top-welcome-wrapper { transform: translateX(-40px); }
+}
+
+
+.dashboard-grid > .main-content,
+.dashboard-grid > main {
+  grid-area: main;
+  padding: 0.5rem 1.25rem; /* reduce top padding further */
+}
+
+/* === SIDEBAR === */
+.sidebar {
+  width: 260px;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.sidebar h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #4f46e5;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: left;
+  border: none;
+  background: none;
+}
+
+.nav-item:hover {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
+.nav-item.active {
+  background-color: #4f46e5;
+  color: #fff;
+}
+
+.sidebar-bottom {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* === MAIN CONTENT === */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* Container inside the dashboard grid that holds the current page content and any in-main modals */
+.main-slot {
+  grid-area: main;
+  padding: 1rem; /* reduced padding */
+  position: relative;
+}
+
+/* keep main content below the sidebar in stacking order so UI elements don't overlap the sidebar */
+.main-slot {
+  z-index: 10;
+}
+
+/* Modal styles that center in the .main-slot rather than the whole viewport */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4); /* translucent backdrop */
+  z-index: 120; /* ensure modals appear above sidebar and main content */
+}
+
+.modal-content {
+  width: min(720px, 95%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.2);
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.create-post-input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+.main-content h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem; /* reduce heading spacing */
+}
+
+/* add a rule for h2 used in pages like MyShoutoutsPage */
+.main-content h2 {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* === CARD STYLING === */
+.card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(2,6,23,0.05);
+  padding: 0.9rem; /* reduced padding */
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 44px rgba(2,6,23,0.07);
+}
+
+/* Visual hint for a selected card during bulk actions */
+.card-outline-selected {
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+  border-color: rgba(79,70,229,0.25);
+}
+
+.selectable-card {
+  cursor: pointer;
+}
+.selectable-card:hover {
+  transform: translateY(-4px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0.75rem;
+}
+
+.card-header h3 {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.card-content {
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* === BUTTONS === */
+.button {
+  background-color: #4f46e5;
+  color: white;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.button:hover {
+  background-color: #4338ca;
+}
+
+.button-outline {
+  background-color: transparent;
+  color: #4f46e5;
+  border: 1px solid #4f46e5;
+}
+
+.button-outline:hover {
+  background-color: #eef2ff;
+}
+
+/* prominent delete button used on MyShoutoutsPage */
+.delete-btn {
+  background: transparent;
+  border: 1px solid #ef4444; /* red-500 */
+  color: #ef4444;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.delete-btn:hover {
+  background: rgba(239,68,68,0.08);
+  transform: translateY(-2px);
+}
+
+/* === TABLES === */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+}
+
+thead {
+  background-color: #eef2ff;
+  color: #111827;
+}
+
+tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* === FOOTER === */
+footer {
+  margin-top: 2rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 220px;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .dashboard-container {
+    flex-direction: column;
+  }
+}
