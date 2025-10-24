@@ -40,11 +40,11 @@ const Header = ({ user, onLogout }) => {
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-bold">
-                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    {user?.username?.charAt(0)?.toUpperCase() || 'U'}
                   </span>
                 </div>
                 <span className="text-gray-700 font-medium hidden sm:block">
-                  {user?.name || 'User'}
+                  {user?.username || 'User'}
                 </span>
               </div>
   
@@ -65,4 +65,4 @@ const Header = ({ user, onLogout }) => {
     )
   }
   
-  export default Header
+  export default Header;

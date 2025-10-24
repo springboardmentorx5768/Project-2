@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import jwt
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
+import shutil
 
 import models, schemas, crud
 from database import engine, SessionLocal
@@ -42,9 +43,6 @@ async def get_current_user(creds: HTTPAuthorizationCredentials = Depends(securit
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None: raise credentials_exception
-        # Add role to payload to use it later
-        role: str = payload.get("role")
-        if role is None: raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
     user = crud.get_user_by_email(db, email=email)
@@ -78,8 +76,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 @app.get("/users/me", response_model=schemas.User)
 async def read_users_me(current_user: schemas.User = Depends(get_current_user)):
     return current_user
-    
-# --- NEW ADMIN-ONLY ENDPOINT ADDED BELOW ---
+            
 @app.get("/users/", response_model=List[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, current_user: schemas.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "admin":
@@ -96,6 +93,44 @@ def read_user_brag_sheets(current_user: schemas.User = Depends(get_current_user)
     if current_user.role == "admin":
         return crud.get_all_brag_sheets(db=db)
     return crud.get_user_brag_sheets(db=db, user_id=current_user.id)
+            
+# --- NEW SHOUTOUT & COMMENT & UPLOAD ENDPOINTS ---
+
+@app.post("/shoutouts/", response_model=schemas.Shoutout)
+def create_shoutout(
+    shoutout: schemas.ShoutoutCreate,
+    current_user: schemas.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.create_shoutout(db=db, shoutout=shoutout, author_id=current_user.id)
+
+@app.get("/shoutouts/", response_model=List[schemas.Shoutout])
+def read_shoutouts(
+    skip: int = 0, limit: int = 100,
+    current_user: schemas.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.get_shoutouts(db=db, skip=skip, limit=limit)
+
+@app.post("/shoutouts/{shoutout_id}/comments/", response_model=schemas.Comment)
+def create_comment_on_shoutout(
+    shoutout_id: int,
+    comment: schemas.CommentCreate,
+    current_user: schemas.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.create_comment(db=db, comment=comment, shoutout_id=shoutout_id, author_id=current_user.id)
+
+# Endpoint for file upload
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...)):
+    import os
+    os.makedirs("uploads", exist_ok=True) # Make sure the 'uploads' directory exists
+    
+    file_path = f"uploads/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"filename": file.filename, "url": f"/{file_path}"}
 
 @app.get("/")
 def read_root():

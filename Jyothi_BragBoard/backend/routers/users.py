@@ -4,35 +4,11 @@ from pydantic import BaseModel, EmailStr
 from database import get_db
 from database_models import User
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, get_current_user
+from schemas import UserCreate, TokenResponse, UserLogin, UserProfile
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-class UserCreate(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-    department: str
-    role: str = "employee"
 
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-class UserProfile(BaseModel):
-    id: int
-    name: str
-    email: str
-    department: str
-    role: str
-    joined_at: str
-    
-    class Config:
-        from_attributes = True
 
 @router.post("/register", response_model=TokenResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -46,7 +22,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     
     # Create user
     new_user = User(
-        username=user.name,
+        username=user.username,
         email=user.email,
         hashed_password=hashed_password,
         department=user.department,
@@ -80,9 +56,24 @@ def get_user_profile(current_user: User = Depends(get_current_user)):
     """Get current user's profile information"""
     return UserProfile(
         id=current_user.id,
-        name=current_user.username,
+        username=current_user.username,
         email=current_user.email,
         department=current_user.department,
         role=current_user.role,
         joined_at=current_user.joined_at.isoformat()
     )
+
+@router.get("/all")
+def get_all_users(db: Session = Depends(get_db)):
+    """Return all users (for tagging, feed display, etc.)"""
+    users = db.query(User).all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "department": u.department,
+            "role": u.role,
+        }
+        for u in users
+    ]

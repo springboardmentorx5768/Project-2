@@ -25,6 +25,7 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Main Content */}
         <MainContent 
           activeView={activeView}
+          setActiveView={setActiveView}
           selectedDepartment={selectedDepartment}
           user={user}
         />

@@ -1,60 +1,130 @@
-                                          Infosys Springboard Internship -- BragBoard
-Week 1
-✅ Tasks Completed
+🌟 Week 1 — Project Setup & Backend Integration
+✅ What I Did
 
-Set up the project structure using React (frontend) and FastAPI (backend).
+Set up the BragBoard project structure with frontend (React) and backend (FastAPI).
 
-Created database models for users (with SQLAlchemy).
+Installed and configured all dependencies for both frontend and backend.
 
-Implemented user registration and login using JWT authentication for secure access.
+Created basic API endpoints in FastAPI:
 
-⚙️ Expected Output
+/register – Register a new user.
 
-Fully functional authentication system (register & login).
+/login – Authenticate user and return JWT token.
 
-Basic database connection established.
+/refresh – Refresh access token.
 
-API endpoints for user auth working correctly.
+/me – Fetch logged-in user details.
 
-⚠️ Errors / Challenges Faced
+/users – List all users.
 
-Faced CORS policy issues between React and FastAPI — resolved by adding proper middleware.
+/shoutouts – Create and fetch shoutouts.
 
-Encountered JWT token verification errors due to incorrect secret key setup — fixed by updating environment variables.
+Implemented JWT authentication to secure all protected routes.
 
-Database migration issues during model updates — solved by reinitializing the tables.
+Connected backend to the database to store users and shoutouts.
 
-Week 2
-✅ Tasks Completed
+⚠️ Errors / Issues Faced
 
-Built a basic responsive layout using Tailwind CSS for the frontend.
+CORS Policy Error — React frontend couldn’t call FastAPI backend.
 
-Implemented user dashboard page displayed after successful login.
+Solved by enabling CORS middleware in FastAPI.
 
-Set up department-wise scoping in the backend to manage user-specific data and access control.
+Invalid Token Error — Token decoding failed during protected route access.
 
-⚙️ Expected Output
+Fixed by properly decoding JWT using the secret key and checking token expiry.
 
-A functional React UI layout connected to backend APIs.
+Database Connection Error — Incorrect DB URL format.
 
-Dashboard rendering user-specific information after login.
+Resolved by correcting connection string in .env.
 
-Department-level data segregation on the backend.
+🎯 Outcome
 
-⚠️ Errors / Challenges Faced
+The backend API became fully functional and connected with the frontend, forming the foundation for authentication and data handling.
 
-Faced alignment and layout issues while using Tailwind utility classes — fixed by reorganizing flex and grid layouts.
+💻 Week 2 — Frontend Authentication & Dashboard Setup
+✅ What I Did
 
-Encountered backend data not displaying correctly due to missing API integration — resolved after proper endpoint connection.
+Built the Login and Register pages using React and Tailwind CSS.
 
-Token expiration problem during repeated API calls — added refresh handling for smoother experience.
+Integrated the frontend with backend APIs (/login and /register).
 
-🧩 Summary
+Stored the JWT token securely in localStorage.
 
-By the end of Week 2, we achieved:
+Implemented route protection — if a user isn’t logged in, they’re redirected to the login page.
 
-Secure authentication flow (JWT-based).
+Designed and developed the Dashboard page layout:
 
-Working user dashboard with Tailwind design.
+Sidebar with navigation (Dashboard, Profile, Settings).
 
-Department-level backend logic integrated successfully.
+Main content area displaying a welcome message and shoutouts list.
+
+Fetched user details from /me API and displayed the logged-in user’s name on the dashboard.
+
+⚠️ Errors / Issues Faced
+
+Token Missing in Headers — API calls failed due to missing authorization header.
+
+Fixed by dynamically attaching Bearer ${token} in fetch requests.
+
+Page Not Updating After Login — Used useNavigate incorrectly.
+
+Solved by properly redirecting after setting token.
+
+Dashboard Not Loading Data — Used incorrect endpoint names.
+
+Corrected by using proper /me and /shoutouts routes.
+
+🎯 Outcome
+
+Users can now register, log in, and access the main dashboard with their personalized welcome message. Basic project flow is functional end-to-end.
+
+🎉 Week 3 — Create a Shout-out Form with Recipient Tagging
+✅ What I Did
+
+Implemented the “Create Shout-out” form in the Dashboard.
+
+Added recipient tagging (@mention) system:
+
+Typing “@” shows a dropdown with user name suggestions from /users.
+
+Selecting a user adds their name in the message and stores their ID in selectedRecipients.
+
+Integrated the form with the /shoutouts POST API to save:
+
+Message text
+
+Department
+
+Recipient IDs
+
+Sender information
+
+Automatically updated the “Recent Shoutouts” section after posting — no page refresh needed.
+
+Enhanced UI using Tailwind CSS for a clean and interactive layout.
+
+⚠️ Errors / Issues Faced
+
+Mention Suggestions Not Showing
+
+Cursor position and regex mismatch; fixed using selectionStart tracking.
+
+Recipient IDs Not Saving in DB
+
+Initially missing in payload; resolved by adding recipient_ids array in POST body.
+
+Profile Showing Wrong Info
+
+/me returned only name; fixed by updating frontend to handle full user data (name, email, department).
+
+Token Expiry Errors (401)
+
+Fixed by adding logout redirection if token is invalid.
+
+UI Overlap for Mentions List
+
+Solved using absolute positioning and z-index in Tailwind CSS.
+
+🎯 Outcome
+
+Shout-outs can now be created, tagged, and displayed dynamically. The Dashboard became interactive and user-friendly, meeting all Week 3 goals successfully. 🚀

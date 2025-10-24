@@ -1,4 +1,4 @@
-**BragBoard Project – Week 1 & Week 2 Documentation**<br><br>
+**BragBoard Project – Week 1, Week 2 & Week 3 Documentation**<br><br>
 **Project Overview**<br><br>
 BragBoard is an internal recognition tool that enables employees to appreciate their colleagues by posting shout-outs.
 It promotes a positive workplace culture by allowing tagging, commenting, and visible appreciation across the organization.Admins can oversee activities, track engagement, and moderate flagged content.<br><br>
@@ -31,34 +31,49 @@ BragBoard is a full-stack web application that connects employees within a compa
 ```
 BragBoard/
 ├── backend/
-│   ├── main.py              # FastAPI entry point
-│   ├── models.py            # Database models
-│   ├── auth.py              # Authentication and JWT logic
-│   ├── database.py          # DB configuration (PostgreSQL)
-│   ├── routers/             # API endpoints
+│   ├── main.py
+│   ├── models.py
+│   ├── auth.py
+│   ├── database.py
+│   ├── routers/
 │   │   └── users.py
-│   ├── requirements.txt     # Python dependencies
-│   └── .env                 # Environment variables
+│   ├── uploads/                # Stores all uploaded images
+│   ├── requirements.txt
+│   └── .env
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Login.jsx        # login form component
-│   │   │   ├── Register.jsx     # register form component
-│   │   │   ├── Dashboard.jsx    # dashboard form component
-│   │   │   ├── Header.jsx       # Header layout component
-│   │   │   ├── Sidebar.jsx      # Sidebar layout component
-│   │   │   └── MainContent.jsx  # Main content area component
+│   │   │   ├── auth/
+│   │   │   │   ├── Auth.jsx
+│   │   │   │   ├── Login.jsx
+│   │   │   │   └── Register.jsx
+│   │   │   ├── dashboard/
+│   │   │   │   ├── Dashboard.jsx
+│   │   │   │   ├── DashboardContent.jsx
+│   │   │   │   ├── Header.jsx
+│   │   │   │   ├── MainContent.jsx
+│   │   │   │   ├── ShoutOutFeed.jsx
+│   │   │   │   ├── ShoutOutForm.jsx
+│   │   │   │   ├── MyShoutOuts.jsx
+│   │   │   │   ├── Settings.jsx
+│   │   │   │   └── Sidebar.jsx
+│   │   ├── services/
+│   │   │   └── api.js
 │   │   ├── App.jsx
-│   │   ├── index.css
-│   │   └── services/
-│   │       └── api.js
+│   │   └── index.css
 │   ├── package.json
 │   ├── vite.config.js
 │   └── tailwind.config.js
 │
-├── .gitignore                
+├── reports/                    # Contains weekly documentation
+│   ├── week1.md
+│   ├── week2.md
+│   └── week3.md
+│
+├── .gitignore
 └── PROJECT_DOCUMENTATION.md
+
 ```
 
 **Week 1 – Project Setup & Authentication**<br><br>
@@ -104,4 +119,31 @@ POST /login → User authentication and JWT generation<br>
 **Output**<br>
 -Users can log in and see dashboard view<br>
 -Layout styled with Tailwind CSS<br>
--Department-specific content visible for each user<br>
+-Department-specific content visible for each user<br><br>
+
+**Week 3 – Shout-Out Feature Implementation**<br><br>
+**Tasks Completed**<br>
+
+-Created a Shout-Out form with recipient selection and user tagging<br>
+-Stored shout-outs in the database with tagged users<br>
+-Added image upload support for shout-outs<br><br>
+**Implementation Details**<br>
+-Designed ShoutOutForm.jsx in frontend/src/components/dashboard/:<br>
+-Dropdown to select a receiver<br>
+-Ability to tag multiple users in a shout-out<br>
+-Input for message, category selection, and visibility (public/private/department-only)<br>
+-Optional image upload with preview before submission<br>
+-Integrated with backend APIs (services/api.js) to store shout-outs and tagged users<br>
+-Backend stores shout-out data in -database including:<br>
+   *message<br>
+   *receiver_id<br>
+   *tagged_user_ids<br>
+   *category<br>
+   *visibility<br>
+-Optional image file path in uploads/ folder<br>
+-Updated ShoutOutFeed.jsx to display shout-outs dynamically with tagged users and reactions<br><br>
+**Output:**<br>
+-Users can create shout-outs and tag other employees<br>
+-Shout-outs are stored in the database with tagged user information<br>
+-Shout-out feed dynamically displays posts, tagged users, and reactions<br>
+-Supports image upload for better visual recognition<br><br>

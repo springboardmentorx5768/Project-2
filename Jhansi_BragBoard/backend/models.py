@@ -8,11 +8,6 @@ class UserRole(str, enum.Enum):
     employee = "employee"
     admin = "admin"
 
-class ReactionType(str, enum.Enum):
-    like = "like"
-    clap = "clap"
-    star = "star"
-
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -51,6 +46,7 @@ class ShoutOutRecipient(Base):
     shoutout = relationship("ShoutOut", back_populates="recipients")
     recipient = relationship("User")
 
+# Comment, Reaction, Report, AdminLog unchanged
 class Comment(Base):
     __tablename__ = "comments"
     id = Column(Integer, primary_key=True, index=True)
@@ -61,6 +57,11 @@ class Comment(Base):
 
     shoutout = relationship("ShoutOut", back_populates="comments")
     user = relationship("User", back_populates="comments")
+
+class ReactionType(str, enum.Enum):
+    like = "like"
+    clap = "clap"
+    star = "star"
 
 class Reaction(Base):
     __tablename__ = "reactions"
@@ -93,4 +94,3 @@ class AdminLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     admin = relationship("User", back_populates="admin_logs")
-

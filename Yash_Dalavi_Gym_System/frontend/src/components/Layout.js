@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import GroupIcon from '@mui/icons-material/Group';
 import SettingsIcon from '@mui/icons-material/Settings';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'; // New Icon
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import CampaignIcon from '@mui/icons-material/Campaign'; // Import Shoutout Icon
 
 function Layout({ children }) {
   return (
@@ -15,21 +16,20 @@ function Layout({ children }) {
         </div>
         <nav className="flex-1 px-2 py-4 space-y-2">
           <Link to="/dashboard" className="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white">
-            <DashboardIcon className="mr-3" />
-            Dashboard
+            <DashboardIcon className="mr-3" /> Dashboard
           </Link>
-          {/* --- NEW LINK ADDED BELOW --- */}
           <Link to="/brag-board" className="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white">
-            <EmojiEventsIcon className="mr-3" />
-            Brag Board
+            <EmojiEventsIcon className="mr-3" /> Brag Board
+          </Link>
+           {/* --- NEW LINK FOR SHOUTOUTS --- */}
+          <Link to="/shoutouts" className="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white">
+            <CampaignIcon className="mr-3" /> Shout-outs
           </Link>
           <Link to="/members" className="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white">
-            <GroupIcon className="mr-3" />
-            Members
+            <GroupIcon className="mr-3" /> Members
           </Link>
           <Link to="/settings" className="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white">
-            <SettingsIcon className="mr-3" />
-            Settings
+            <SettingsIcon className="mr-3" /> Settings
           </Link>
         </nav>
       </div>
