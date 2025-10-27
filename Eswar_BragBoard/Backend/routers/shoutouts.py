@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+import os
+import shutil
+from pathlib import Path
 from database import get_db
-from models import ShoutOut, User, ShoutOutRecipient
+from models import ShoutOut, User, ShoutOutRecipient, ShoutOutReaction
 from auth import get_current_user
 
 router = APIRouter(prefix="/shoutouts", tags=["shoutouts"])
@@ -16,6 +19,7 @@ class ShoutOutCreate(BaseModel):
     receiver_id: int
     category: Optional[str] = None
     is_public: str = "public"
+    image_url: Optional[str] = None
 
 class ShoutOutCreateMulti(BaseModel):
     title: Optional[str] = None
@@ -23,6 +27,7 @@ class ShoutOutCreateMulti(BaseModel):
     recipient_ids: List[int]
     category: Optional[str] = None
     is_public: str = "public"
+    image_url: Optional[str] = None
 
 class ShoutOutResponse(BaseModel):
     id: int
@@ -34,8 +39,10 @@ class ShoutOutResponse(BaseModel):
     receiver_department: str
     category: str
     is_public: str
+    image_url: Optional[str] = None
+    reactions: Optional[List[dict]] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -68,7 +75,8 @@ def create_shoutout(
         giver_department=current_user.department,
         receiver_department=receiver.department,
         category=(shoutout.category or "teamwork"),
-        is_public=shoutout.is_public
+        is_public=shoutout.is_public,
+        image_url=shoutout.image_url
     )
     
     db.add(new_shoutout)
@@ -85,6 +93,7 @@ def create_shoutout(
         receiver_department=new_shoutout.receiver_department,
         category=new_shoutout.category,
         is_public=new_shoutout.is_public,
+        image_url=new_shoutout.image_url,
         created_at=new_shoutout.created_at
     )
 
@@ -119,7 +128,8 @@ def create_shoutout_multi(
         giver_department=current_user.department,
         receiver_department=primary.department,
         category=(payload.category or "teamwork"),
-        is_public=payload.is_public
+        is_public=payload.is_public,
+        image_url=payload.image_url
     )
 
     db.add(new_shoutout)
@@ -145,6 +155,7 @@ def create_shoutout_multi(
             receiver_department=r.department,
             category=new_shoutout.category,
             is_public=new_shoutout.is_public,
+            image_url=new_shoutout.image_url,
             created_at=new_shoutout.created_at
         ))
 
@@ -153,20 +164,34 @@ def create_shoutout_multi(
 @router.get("/feed", response_model=List[ShoutOutResponse])
 def get_shoutouts_feed(
     department: Optional[str] = Query(None, description="Filter by department. Use 'all' for all departments"),
+    sender: Optional[str] = Query(None, description="Filter by sender name"),
+    date_from: Optional[datetime] = Query(None, description="Filter shout-outs from this date (YYYY-MM-DD)"),
+    date_to: Optional[datetime] = Query(None, description="Filter shout-outs until this date (YYYY-MM-DD)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get shoutouts feed with department-wise filtering
+    Get shoutouts feed with department-wise filtering, sender filtering, and date range filtering
     - department='all' or None: Show all public shoutouts + department-only from user's dept
     - department='engineering': Show shoutouts related to engineering department
-    - etc.
+    - sender: Filter by sender name (case-insensitive partial match)
+    - date_from/date_to: Filter by creation date range
     """
-    
+
     query = db.query(ShoutOut).join(User, ShoutOut.giver_id == User.id)
-    
+
+    # Apply sender filter
+    if sender:
+        query = query.filter(User.name.ilike(f"%{sender}%"))
+
+    # Apply date range filters
+    if date_from:
+        query = query.filter(ShoutOut.created_at >= date_from)
+    if date_to:
+        query = query.filter(ShoutOut.created_at <= date_to)
+
     if department and department != "all":
         # Filter by specific department - show shoutouts where either giver or receiver is from that dept
         query = query.filter(
@@ -175,7 +200,7 @@ def get_shoutouts_feed(
                 ShoutOut.receiver_department == department
             )
         )
-        
+
         # Apply visibility rules for department filtering
         if current_user.department == department or current_user.role == "admin":
             # User is from this department or admin - show public + department_only
@@ -202,14 +227,14 @@ def get_shoutouts_feed(
                     )
                 )
             )
-    
+
     shoutouts = query.order_by(ShoutOut.created_at.desc()).offset(skip).limit(limit).all()
-    
+
     result = []
     for shoutout in shoutouts:
         giver = db.query(User).filter(User.id == shoutout.giver_id).first()
         receiver = db.query(User).filter(User.id == shoutout.receiver_id).first()
-        
+
         result.append(ShoutOutResponse(
             id=shoutout.id,
             title=shoutout.title,
@@ -220,9 +245,10 @@ def get_shoutouts_feed(
             receiver_department=shoutout.receiver_department,
             category=shoutout.category,
             is_public=shoutout.is_public,
+            image_url=shoutout.image_url,
             created_at=shoutout.created_at
         ))
-    
+
     return result
 
 @router.get("/my-shoutouts", response_model=List[ShoutOutResponse])
@@ -266,6 +292,7 @@ def get_my_shoutouts(
             receiver_department=shoutout.receiver_department,
             category=shoutout.category,
             is_public=shoutout.is_public,
+            image_url=shoutout.image_url,
             created_at=shoutout.created_at
         ))
     
@@ -336,3 +363,160 @@ def search_users_by_department(
         }
         for user in users
     ]
+
+@router.delete("/{shoutout_id}")
+def delete_shoutout(
+    shoutout_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a shout-out (admin only)"""
+    # Check if user is admin
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete shout-outs")
+
+    # Find the shout-out
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shout-out not found")
+
+    # Delete associated image file if it exists
+    if shoutout.image_url:
+        try:
+            image_path = Path(f"uploads{shoutout.image_url}")
+            if image_path.exists():
+                image_path.unlink()
+        except Exception:
+            # Log error but don't fail the deletion
+            pass
+
+    # Delete the shout-out
+    db.delete(shoutout)
+    db.commit()
+
+    return {"message": "Shout-out deleted successfully"}
+
+@router.post("/upload-image")
+def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload an image for shout-out attachments"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, GIF, WebP) are allowed")
+
+    # Validate file size (max 5MB)
+    max_size = 5 * 1024 * 1024  # 5MB
+    file_content = file.file.read()
+    if len(file_content) > max_size:
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path("uploads/images")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate unique filename
+    file_extension = Path(file.filename).suffix.lower()
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    unique_filename = f"{current_user.id}_{timestamp}{file_extension}"
+    file_path = upload_dir / unique_filename
+
+    # Save file
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_content)
+
+    # Return the relative URL path
+    image_url = f"/uploads/images/{unique_filename}"
+    return {"image_url": image_url}
+
+@router.post("/{shoutout_id}/react")
+def add_reaction(
+    shoutout_id: int,
+    reaction_type: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Add or change a reaction to a shout-out (one reaction per user per shoutout)"""
+
+    # Validate reaction type
+    valid_reactions = ['thumbs_up', 'heart', 'clap', 'celebrate', 'insightful', 'support']
+    if reaction_type not in valid_reactions:
+        raise HTTPException(status_code=400, detail=f"Invalid reaction type. Valid types: {', '.join(valid_reactions)}")
+
+    # Check if shoutout exists
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shout-out not found")
+
+    # Check if user already has any reaction on this shoutout
+    existing_reaction = db.query(ShoutOutReaction).filter(
+        ShoutOutReaction.shoutout_id == shoutout_id,
+        ShoutOutReaction.user_id == current_user.id
+    ).first()
+
+    if existing_reaction:
+        if existing_reaction.reaction_type == reaction_type:
+            # Same reaction type - remove it (toggle off)
+            db.delete(existing_reaction)
+            db.commit()
+            return {"message": "Reaction removed", "action": "removed"}
+        else:
+            # Different reaction type - update to new type
+            existing_reaction.reaction_type = reaction_type
+            existing_reaction.created_at = datetime.utcnow()  # Update timestamp
+            db.commit()
+            db.refresh(existing_reaction)
+            return {"message": "Reaction updated", "action": "updated"}
+    else:
+        # No existing reaction - add new one
+        new_reaction = ShoutOutReaction(
+            shoutout_id=shoutout_id,
+            user_id=current_user.id,
+            reaction_type=reaction_type
+        )
+        db.add(new_reaction)
+        db.commit()
+        db.refresh(new_reaction)
+        return {"message": "Reaction added", "action": "added"}
+
+@router.get("/{shoutout_id}/reactions")
+def get_reactions(
+    shoutout_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all reactions for a shout-out"""
+
+    # Check if shoutout exists
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shout-out not found")
+
+    # Get reaction counts
+    reactions = db.query(
+        ShoutOutReaction.reaction_type,
+        func.count(ShoutOutReaction.id).label('count')
+    ).filter(
+        ShoutOutReaction.shoutout_id == shoutout_id
+    ).group_by(ShoutOutReaction.reaction_type).all()
+
+    # Get user's reactions
+    user_reactions = db.query(ShoutOutReaction.reaction_type).filter(
+        ShoutOutReaction.shoutout_id == shoutout_id,
+        ShoutOutReaction.user_id == current_user.id
+    ).all()
+
+    user_reaction_types = [r.reaction_type for r in user_reactions]
+
+    return {
+        "reactions": [
+            {
+                "type": reaction.reaction_type,
+                "count": reaction.count,
+                "user_reacted": reaction.reaction_type in user_reaction_types
+            }
+            for reaction in reactions
+        ]
+    }

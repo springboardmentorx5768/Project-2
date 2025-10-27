@@ -105,12 +105,12 @@ class ApiService {
     }
   }
 
-  async createShoutOutMulti({ message, recipient_ids, is_public = 'public' }) {
+  async createShoutOutMulti({ message, recipient_ids, is_public = 'public', image_url = null }) {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No access token found');
 
-      const payload = { message, recipient_ids, is_public };
+      const payload = { message, recipient_ids, is_public, image_url };
 
       const response = await fetch(`${API_BASE_URL}/shoutouts/create-multi`, {
         method: 'POST',
@@ -160,12 +160,142 @@ class ApiService {
     }
   }
 
+  async getFeed({ department = 'all', sender = '', dateFrom = '', dateTo = '', skip = 0, limit = 100 }) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const params = new URLSearchParams();
+      if (department) params.append('department', department);
+      if (sender) params.append('sender', sender);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
+      params.append('skip', skip.toString());
+      params.append('limit', limit.toString());
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/feed?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to fetch feed');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during feed fetch');
+    }
+  }
+
+  async uploadImage(file) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/upload-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to upload image');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during image upload');
+    }
+  }
+
+  async deleteShoutOut(shoutoutId) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/${shoutoutId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to delete shout-out');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during shout-out deletion');
+    }
+  }
+
   async checkHealth() {
     try {
       const response = await fetch(`${API_BASE_URL}/health`);
       return await response.json();
     } catch (error) {
       throw new Error('Cannot connect to server');
+    }
+  }
+
+  async addReaction(shoutoutId, reactionType) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/${shoutoutId}/react?reaction_type=${encodeURIComponent(reactionType)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to add reaction');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during reaction');
+    }
+  }
+
+  async getReactions(shoutoutId) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/${shoutoutId}/reactions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to get reactions');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during getting reactions');
     }
   }
 }

@@ -1,7 +1,7 @@
 # BragBoard Project - Complete Documentation Report
 
 ### Project Description
-BragBoard is a full-stack web application designed to manage employee achievements, skills, and departmental information. It features secure user authentication, role-based access control, and a modern responsive interface built with industry-standard technologies.
+BragBoard is a comprehensive full-stack web application designed as an employee recognition and shout-out platform. It enables users to give and receive appreciation messages (shout-outs) within their organization, with features like department-based filtering, multi-recipient shout-outs, visibility controls, and analytics. The application features secure JWT-based authentication, role-based access control, and a modern responsive interface built with industry-standard technologies.
 
 ---
 
@@ -39,34 +39,45 @@ BragBoard is a full-stack web application designed to manage employee achievemen
 ```
 BragBoard/
 ├── Backend/                    # FastAPI Backend Application
-│   ├── main.py                # Application entry point
-│   ├── models.py              # Database models
-│   ├── database.py            # Database configuration
-│   ├── auth.py                # Authentication logic
-│   ├── config.py              # Environment configuration
-│   ├── requirements.txt       # Python dependencies
-│   ├── .env                   # Environment variables
-│   ├── POSTGRESQL_SETUP.md    # Database setup guide
-│   ├── check_db.py            # Database verification script
+│   ├── main.py                # Application entry point with CORS and routing
+│   ├── models.py              # SQLAlchemy database models (User, ShoutOut, ShoutOutRecipient)
+│   ├── database.py            # PostgreSQL database configuration and connection
+│   ├── auth.py                # JWT authentication and password hashing logic
+│   ├── config.py              # Environment configuration and settings
+│   ├── requirements.txt       # Python dependencies (FastAPI, SQLAlchemy, etc.)
+│   ├── .env                   # Environment variables (database URL, secrets)
+│   ├── POSTGRESQL_SETUP.md    # Database setup and migration guide
+│   ├── check_db.py            # Database connection verification script
+│   ├── view_data.py           # Database data viewing utility
 │   └── routers/               # API route modules
-│       └── users.py           # User management endpoints
+│       ├── users.py           # User registration, login, and profile endpoints
+│       └── shoutouts.py       # Shout-out creation, feed, and analytics endpoints
 ├── Frontend/                   # React Frontend Application
 │   ├── src/                   # Source code
-│   │   ├── App.jsx            # Main application component
-│   │   ├── App.css            # Application styles
-│   │   ├── index.css          # Global styles
+│   │   ├── App.jsx            # Main application component with auth state
+│   │   ├── App.css            # Application-specific styles
+│   │   ├── index.css          # Global styles and Tailwind imports
+│   │   ├── main.jsx           # React application entry point
 │   │   ├── components/        # React components
+│   │   │   ├── Auth.jsx       # Authentication component (login/register)
+│   │   │   ├── Dashboard.jsx  # Main dashboard layout
+│   │   │   ├── Header.jsx     # Top navigation header
+│   │   │   ├── Sidebar.jsx    # Navigation sidebar with department filters
+│   │   │   ├── MainContent.jsx # Main content area with views
 │   │   │   ├── Register.jsx   # User registration form
 │   │   │   └── Login.jsx      # User login form
 │   │   └── services/          # API service layer
-│   │       └── api.js         # API communication
+│   │       └── api.js         # API communication and error handling
 │   ├── public/                # Static assets
-│   ├── package.json           # Node.js dependencies
-│   ├── vite.config.js         # Vite configuration
+│   │   └── vite.svg           # Vite logo
+│   ├── package.json           # Node.js dependencies and scripts
+│   ├── vite.config.js         # Vite build configuration
 │   ├── tailwind.config.js     # Tailwind CSS configuration
-│   └── postcss.config.js      # PostCSS configuration
-├── .gitignore                 # Git ignore rules
-└── PROJECT_DOCUMENTATION.md   # This documentation
+│   ├── postcss.config.js      # PostCSS configuration
+│   ├── eslint.config.js       # ESLint configuration
+│   └── README.md              # Frontend README
+├── .gitignore                 # Git ignore rules for both frontend and backend
+└── PROJECT_DOCUMENTATION.md   # This comprehensive documentation
 ```
 
 ---
@@ -99,49 +110,98 @@ BragBoard/
 ```python
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
     department = Column(String, nullable=False)
-    role = Column(String, default="employee")
+    role = Column(Enum("employee", "admin", name="user_role"), default="employee")
     joined_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    given_shoutouts = relationship("ShoutOut", foreign_keys="ShoutOut.giver_id", back_populates="giver")
+    received_shoutouts = relationship("ShoutOut", foreign_keys="ShoutOut.receiver_id", back_populates="receiver")
+    shoutout_recipient_links = relationship("ShoutOutRecipient", back_populates="recipient")
+```
+
+**ShoutOut Model Implementation:**
+```python
+class ShoutOut(Base):
+    __tablename__ = "shoutouts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    giver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    giver_department = Column(String, nullable=False)
+    receiver_department = Column(String, nullable=False)
+    category = Column(Enum("teamwork", "innovation", "leadership", "customer_service", "problem_solving", "mentorship", name="shoutout_category"), nullable=False)
+    is_public = Column(Enum("public", "department_only", "private", name="visibility_level"), default="public")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    giver = relationship("User", foreign_keys=[giver_id], back_populates="given_shoutouts")
+    receiver = relationship("User", foreign_keys=[receiver_id], back_populates="received_shoutouts")
+    recipients = relationship("ShoutOutRecipient", back_populates="shoutout", cascade="all, delete-orphan")
+```
+
+**ShoutOutRecipient Model (for multi-recipient shout-outs):**
+```python
+class ShoutOutRecipient(Base):
+    __tablename__ = "shoutout_recipients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    shoutout = relationship("ShoutOut", back_populates="recipients")
+    recipient = relationship("User", back_populates="shoutout_recipient_links")
 ```
 
 #### 2.2 Authentication System
 **JWT Implementation:**
-- Secure password hashing using bcrypt
-- Token-based authentication with refresh capabilities
+- Secure password hashing using bcrypt with pbkdf2_sha256
+- Token-based authentication with access and refresh tokens
 - Role-based access control (Employee/Admin roles)
 - Session management and token validation
 
 **Security Features:**
-- Password strength requirements
-- Secure token generation and validation
+- Password strength requirements and validation
+- Secure token generation with configurable expiration
 - Environment-based secret key management
 - CORS configuration for cross-origin requests
+- HTTP Bearer token authentication
 
 #### 2.3 API Endpoints
 **User Management Endpoints:**
-- `POST /register` - User registration
-- `POST /login` - User authentication
-- `GET /users/me` - Get current user profile
-- `PUT /users/me` - Update user profile
+- `POST /users/register` - User registration with automatic token generation
+- `POST /users/login` - User authentication with token response
+- `GET /users/profile` - Get current user profile information
+
+**Shout-Out Endpoints:**
+- `POST /shoutouts/create` - Create single-recipient shout-out
+- `POST /shoutouts/create-multi` - Create multi-recipient shout-out
+- `GET /shoutouts/feed` - Get shout-out feed with department filtering
+- `GET /shoutouts/my-shoutouts` - Get user's given/received shout-outs
+- `GET /shoutouts/departments/stats` - Get department statistics
+- `GET /shoutouts/users/search` - Search users for shout-out creation
+
+**Health Check Endpoints:**
+- `GET /` - Basic API status
+- `GET /health` - Database health check
 
 #### 2.4 Database Configuration
-**Flexible Database Support:**
+**PostgreSQL-Only Database Support:**
 ```python
-# Supports both PostgreSQL and SQLite
-if DATABASE_URL.startswith("postgresql"):
-    engine = create_engine(
-        DATABASE_URL,
-        echo=(ENVIRONMENT == "development"),
-        pool_pre_ping=True,
-        pool_recycle=300,
-    )
-else:
-    engine = create_engine(DATABASE_URL, echo=False)
+# PostgreSQL configuration with connection pooling
+engine = create_engine(
+    DATABASE_URL,
+    echo=(ENVIRONMENT == "development"),
+    pool_pre_ping=True,  # Verify connections before use
+    pool_recycle=300,    # Recycle connections every 5 minutes
+)
 ```
 
 ### Phase 3: Frontend Development (Week 3)
@@ -178,19 +238,56 @@ else:
 #### 3.4 API Integration
 **Service Layer Implementation:**
 ```javascript
-// API service for backend communication
-const API_BASE_URL = 'http://localhost:8000';
+// API service for backend communication with error handling
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-export const registerUser = async (userData) => {
-    const response = await fetch(`${API_BASE_URL}/register`, {
+class ApiService {
+  async register(userData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Registration failed');
+        throw new Error(msg);
+      }
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during registration');
+    }
+  }
+
+  async createShoutOutMulti({ message, recipient_ids, is_public = 'public' }) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/create-multi`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(userData),
-    });
-    return response.json();
-};
+        body: JSON.stringify({ message, recipient_ids, is_public }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to create shout-out');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during shout-out creation');
+    }
+  }
+}
+
+export default new ApiService();
 ```
 
 ### Phase 4: Integration & Testing (Week 4)
@@ -314,14 +411,57 @@ CREATE TABLE users (
 );
 ```
 
+### ShoutOuts Table
+```sql
+CREATE TABLE shoutouts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    message TEXT NOT NULL,
+    giver_id INTEGER NOT NULL REFERENCES users(id),
+    receiver_id INTEGER NOT NULL REFERENCES users(id),
+    giver_department VARCHAR NOT NULL,
+    receiver_department VARCHAR NOT NULL,
+    category VARCHAR NOT NULL,
+    is_public VARCHAR DEFAULT 'public',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### ShoutOut Recipients Table (for multi-recipient shout-outs)
+```sql
+CREATE TABLE shoutout_recipients (
+    id SERIAL PRIMARY KEY,
+    shoutout_id INTEGER NOT NULL REFERENCES shoutouts(id) ON DELETE CASCADE,
+    recipient_id INTEGER NOT NULL REFERENCES users(id)
+);
+```
+
 **Field Descriptions:**
-- `id`: Auto-incrementing primary key
-- `name`: User's full name
-- `email`: Unique email address for login
-- `password`: Hashed password using bcrypt
-- `department`: User's department/division
-- `role`: User role (employee/admin)
-- `joined_at`: Registration timestamp
+- **Users Table:**
+  - `id`: Auto-incrementing primary key
+  - `name`: User's full name
+  - `email`: Unique email address for login
+  - `password`: Hashed password using bcrypt
+  - `department`: User's department/division
+  - `role`: User role (employee/admin)
+  - `joined_at`: Registration timestamp
+
+- **ShoutOuts Table:**
+  - `id`: Auto-incrementing primary key
+  - `title`: Shout-out title (auto-generated or user-provided)
+  - `message`: Main appreciation message
+  - `giver_id`: Foreign key to user who gave the shout-out
+  - `receiver_id`: Foreign key to primary recipient
+  - `giver_department`: Department of the giver
+  - `receiver_department`: Department of the primary recipient
+  - `category`: Shout-out category (teamwork, innovation, etc.)
+  - `is_public`: Visibility level (public, department_only, private)
+  - `created_at`: Timestamp of creation
+
+- **ShoutOut Recipients Table:**
+  - `id`: Auto-incrementing primary key
+  - `shoutout_id`: Foreign key to shoutout
+  - `recipient_id`: Foreign key to additional recipient
 
 ---
 
@@ -435,9 +575,9 @@ CREATE TABLE users (
 - **Total Development Time:** 4 weeks
 - **Lines of Code:** 2,500+ lines
 - **Files Created:** 30+ files
-- **Components Developed:** 15+ components
-- **API Endpoints:** 10+ endpoints
-- **Database Tables:** 1 main table (expandable)
+- **Components Developed:** 15+ React components
+- **API Endpoints:** 10+ RESTful endpoints
+- **Database Tables:** 3 tables (users, shoutouts, shoutout_recipients)
 
 ### Technology Integration
 - **Frontend Dependencies:** 15+ packages
@@ -453,25 +593,28 @@ CREATE TABLE users (
 The BragBoard project successfully demonstrates comprehensive full-stack web development skills using modern technologies and industry best practices. The implementation showcases:
 
 ### Key Achievements
-1. **Complete Full-Stack Application:** Functional frontend and backend integration
-2. **Modern Technology Stack:** React.js, FastAPI, and PostgreSQL
-3. **Security Implementation:** JWT authentication and password hashing
-4. **Responsive Design:** Mobile-first, accessible user interface
-5. **Production Readiness:** Scalable architecture and deployment configuration
+1. **Complete Full-Stack Application:** Functional employee recognition platform with shout-outs
+2. **Modern Technology Stack:** React.js 19.1.1, FastAPI 0.117.1, and PostgreSQL
+3. **Advanced Features:** Multi-recipient shout-outs, department filtering, visibility controls
+4. **Security Implementation:** JWT authentication, bcrypt password hashing, role-based access
+5. **Responsive Design:** Mobile-first, accessible user interface with Tailwind CSS
+6. **Production Readiness:** Scalable architecture, database connection pooling, error handling
 
 ### Technical Excellence
-- Clean, maintainable code architecture
-- Proper separation of concerns
-- Comprehensive error handling
-- Security best practices
-- Performance optimization
+- Clean, maintainable code architecture with modular design
+- Proper separation of concerns (frontend/backend/database layers)
+- Comprehensive error handling and validation
+- Security best practices (JWT, password hashing, input validation)
+- Performance optimization (database pooling, efficient queries)
+- Modern development practices (ESLint, type hints, responsive design)
 
 ### Professional Development
-- Industry-standard development practices
-- Version control and collaboration
-- Documentation and communication
-- Problem-solving and debugging skills
-- Project planning and execution
+- Industry-standard development practices and best practices
+- Version control (Git) and collaborative development workflow
+- Technical documentation and communication skills
+- Problem-solving, debugging, and troubleshooting abilities
+- Project planning, time management, and iterative development
+- Full-stack development lifecycle from concept to deployment
 
 The BragBoard project provides a solid foundation for future enhancements and demonstrates readiness for professional software development environments.
 
@@ -479,11 +622,12 @@ The BragBoard project provides a solid foundation for future enhancements and de
 
 ## 📞 Contact & Repository
 
-**GitHub Repository:** https://github.com/eswarmadapani/BragBoard.git  
-**Project Demo:** [Available upon request]  
-**Documentation:** Complete setup and usage instructions included  
+**GitHub Repository:** https://github.com/eswarmadapani/BragBoard.git
+**Project Demo:** [Available upon request]
+**Documentation:** Complete setup and usage instructions included
 **Support:** Comprehensive README and setup guides provided
+**Technologies Used:** React.js, FastAPI, PostgreSQL, JWT, Tailwind CSS
 
 ---
 
-*This documentation represents the complete development journey of the BragBoard project, showcasing technical implementation, learning outcomes, and professional growth through full-stack web development.*
+*This documentation represents the complete development journey of the BragBoard project, showcasing technical implementation, learning outcomes, and professional growth through full-stack web development. The project demonstrates proficiency in modern web development technologies and best practices for building scalable, secure, and user-friendly applications.*

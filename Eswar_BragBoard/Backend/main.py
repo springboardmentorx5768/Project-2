@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+import os
 from database import engine, SessionLocal, get_db
 from models import Base
 from routers.users import router as users_router
@@ -33,6 +35,10 @@ def health_check(db: Session = Depends(get_db)):
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database": str(e)}
+
+# Mount static files for uploaded images
+if os.path.exists("uploads"):
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(users_router)
 app.include_router(shoutouts_router)
