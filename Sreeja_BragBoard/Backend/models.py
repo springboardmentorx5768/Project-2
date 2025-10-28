@@ -19,7 +19,6 @@ class User(Base):
     # Relationships
     given_shoutouts = relationship("ShoutOut", foreign_keys="ShoutOut.giver_id", back_populates="giver")
     received_shoutouts = relationship("ShoutOut", foreign_keys="ShoutOut.receiver_id", back_populates="receiver")
-    shoutout_recipient_links = relationship("ShoutOutRecipient", back_populates="recipient")
 
 class ShoutOut(Base):
     __tablename__ = "shoutouts"
@@ -34,19 +33,9 @@ class ShoutOut(Base):
     category = Column(Enum("teamwork", "innovation", "leadership", "customer_service", "problem_solving", "mentorship", name="shoutout_category"), nullable=False)
     is_public = Column(Enum("public", "department_only", "private", name="visibility_level"), default="public")
     created_at = Column(DateTime, default=datetime.utcnow)
+    image_url = Column(String, nullable=True)  # Store the URL of uploaded images
     
     # Relationships
     giver = relationship("User", foreign_keys=[giver_id], back_populates="given_shoutouts")
     receiver = relationship("User", foreign_keys=[receiver_id], back_populates="received_shoutouts")
-    recipients = relationship("ShoutOutRecipient", back_populates="shoutout", cascade="all, delete-orphan")
-
-class ShoutOutRecipient(Base):
-    __tablename__ = "shoutout_recipients"
-
-    id = Column(Integer, primary_key=True, index=True)
-    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
-    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
-    shoutout = relationship("ShoutOut", back_populates="recipients")
-    recipient = relationship("User", back_populates="shoutout_recipient_links")
 

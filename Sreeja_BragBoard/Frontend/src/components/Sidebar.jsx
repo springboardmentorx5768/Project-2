@@ -50,7 +50,7 @@ const Sidebar = ({ activeView, setActiveView, selectedDepartment, setSelectedDep
   ]
 
   return (
-    <aside className="w-64 bg-white/80 backdrop-blur-sm shadow-lg border-r border-white/20 min-h-screen">
+    <aside className="w-64 bg-white/80 backdrop-blur-sm shadow-lg border-r border-white/20 h-full overflow-y-auto">
       <div className="p-6">
         {/* Navigation Menu */}
         <nav className="space-y-2 mb-8">
