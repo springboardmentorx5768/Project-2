@@ -29,50 +29,65 @@ BragBoard is a full-stack web application that connects employees within a compa
 -python-jose & passlib – For encryption and token management<br><br>
 **📁 Project Structure**
 ```
-BragBoard/
-├── backend/
-│   ├── main.py
-│   ├── models.py
-│   ├── auth.py
-│   ├── database.py
-│   ├── routers/
-│   │   └── users.py
-│   ├── uploads/                # Stores all uploaded images
-│   ├── requirements.txt
-│   └── .env
+Jyothi_BragBoard/
 │
-├── frontend/
+├── backend/                                  
+│   ├── main.py                              
+│   ├── config.py                             
+│   ├── database.py                          
+│   ├── database_models.py                 
+│   ├── schemas.py                         
+│   ├── auth.py                               
+│   ├── check_db.py                        
+│   │
+│   ├── routers/                              
+│   │   ├── users.py                       
+│   │   └── shoutouts.py                      
+│   │
+│   ├── uploads/                             
+│   │   └── (image files saved here)
+│   │
+│   ├── requirements.txt                    
+│   └── .env                                  
+│
+│
+├── frontend/                               
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── auth/
+│   │   │   ├── auth/                         
 │   │   │   │   ├── Auth.jsx
 │   │   │   │   ├── Login.jsx
 │   │   │   │   └── Register.jsx
-│   │   │   ├── dashboard/
+│   │   │   │
+│   │   │   ├── dashboard/                    
 │   │   │   │   ├── Dashboard.jsx
-│   │   │   │   ├── DashboardContent.jsx
 │   │   │   │   ├── Header.jsx
+│   │   │   │   ├── Sidebar.jsx
+│   │   │   │   ├── Settings.jsx
 │   │   │   │   ├── MainContent.jsx
+│   │   │   │   └── DashboardContent.jsx
+│   │   │   │
+│   │   │   ├── shoutouts/                   
 │   │   │   │   ├── ShoutOutFeed.jsx
 │   │   │   │   ├── ShoutOutForm.jsx
+│   │   │   │   ├── ShoutOutPage.jsx
 │   │   │   │   ├── MyShoutOuts.jsx
-│   │   │   │   ├── Settings.jsx
-│   │   │   │   └── Sidebar.jsx
+│   │   │   │   └── EditShoutOut.jsx
+│   │   │
 │   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   └── index.css
+│   │   │   └── api.js                        
+│   │   │
+│   │   ├── App.jsx                        
+│   │   └── index.css                        
+│   │
 │   ├── package.json
 │   ├── vite.config.js
 │   └── tailwind.config.js
 │
-├── reports/                    # Contains weekly documentation
-│   ├── week1.md
-│   ├── week2.md
-│   └── week3.md
 │
 ├── .gitignore
-└── PROJECT_DOCUMENTATION.md
+└── PROJECT_DOCUMENTATION.md                
+
 
 ```
 
@@ -147,3 +162,29 @@ POST /login → User authentication and JWT generation<br>
 -Shout-outs are stored in the database with tagged user information<br>
 -Shout-out feed dynamically displays posts, tagged users, and reactions<br>
 -Supports image upload for better visual recognition<br><br>
+
+**Week 4 – Shout-Out Feed Enhancements & Filtering**<br><br>
+**Tasks Completed**<br>
+-Displayed all shout-outs on the main feed<br>
+-Implemented filters by department, sender, and date<br>
+-Added support for attachments or image uploads in shout-outs (optional)<br><br>
+**Implementation Details**<br>
+-Enhanced ShoutOutFeed.jsx to fetch and display all shout-outs dynamically from the backend<br>
+-Integrated backend endpoint /shoutouts/feed to return all posts along with user and tagged details<br>
+-Implemented filter functionality:<br>
+-Department filter → allows users to view shout-outs from specific departments or all<br>
+-Sender filter → view shout-outs created by specific users<br>
+-Date filter → display shout-outs from a selected date range<br>
+-Added total shout-out count in the feed section (updates automatically when filters are applied)<br>
+-Included timestamps for created and edited posts:<br>
+     - created_at shows when a shout-out was posted<br>
+     - edited_at updates only when a shout-out is edited<br>
+-Optional enhancement: Added support for displaying images or attachments in the shout-out feed<br>
+-Improved frontend UI with gradient backgrounds and smooth transitions using Tailwind CSS<br><br>
+**Output**<br>
+-Feed displays all shout-outs across departments<br>
+-Filters allow users to refine view by department, sender, and date<br>
+-Total shout-out count updates dynamically with filter selection<br>
+-Edited posts show “Edited” timestamp properly<br>
+-Attachments/images are visible in the feed for better visual engagement<br><br>
+

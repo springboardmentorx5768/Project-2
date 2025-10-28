@@ -2,12 +2,22 @@ import { useState, useEffect } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
-import ApiService from "../../services/api"; 
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeView, setActiveView] = useState("dashboard");
   const [shoutouts, setShoutouts] = useState([]);
   const [shoutoutUpdated, setShoutoutUpdated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(user); // 👈 local state for updates
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const updatedUser = JSON.parse(localStorage.getItem("current_user"));
+      setCurrentUser(updatedUser);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+    return () => window.removeEventListener("userUpdated", handleUserUpdate);
+  }, []);
 
   // Fetch shoutouts on mount
   useEffect(() => {
@@ -29,7 +39,7 @@ const Dashboard = ({ user, onLogout }) => {
   }, []);
 
   const handleShoutoutPosted = () => {
-    setShoutoutUpdated((prev) => !prev); // toggles to notify feed
+    setShoutoutUpdated((prev) => !prev);
   };
   
   // Handle delete locally
@@ -39,24 +49,22 @@ const Dashboard = ({ user, onLogout }) => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
-      <Header user={user} onLogout={onLogout} />
+      <Header user={currentUser} onLogout={onLogout} />
 
-      {/* Sidebar + MainContent */}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           activeView={activeView}
           setActiveView={setActiveView}
-          userRole={user?.role}
+          userRole={currentUser?.role}
         />
 
         <div className="flex-1 overflow-y-auto">
           <MainContent
             activeView={activeView}
-            user={user}
+            user={currentUser}
             shoutouts={shoutouts}
             handleDeleteShout={handleDeleteShout}
-            shoutoutUpdated={shoutoutUpdated}      
+            shoutoutUpdated={shoutoutUpdated}
             handleShoutoutPosted={handleShoutoutPosted}
           />
         </div>

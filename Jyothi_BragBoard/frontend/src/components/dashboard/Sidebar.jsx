@@ -37,30 +37,33 @@ const Sidebar = ({ activeView, setActiveView, userRole }) => {
     <div
       className={`${
         isOpen ? "w-64" : "w-20"
-      } bg-white border-r border-gray-200 text-gray-800 min-h-screen p-4 flex flex-col transition-all duration-300 shadow-md`}
+      } bg-gradient-to-b from-indigo-50 via-white to-purple-50 text-gray-800 min-h-screen p-4 flex flex-col transition-all duration-300 border-r border-gray-200 shadow-sm`}
     >
-      {/* Toggle button */}
+      {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="self-end mb-4 text-gray-500 hover:text-gray-700 focus:outline-none"
+        className="self-end mb-4 text-gray-500 hover:text-indigo-600 transition"
       >
         {isOpen ? "←" : "→"}
       </button>
 
       {/* Menu Items */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {menuItems.map((item) => (
           <div
             key={item.id}
             onClick={() => setActiveView(item.id)}
-            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-300 ease-in-out ${
               activeView === item.id
-                ? "bg-gradient-to-r from-violet-500 to-pink-400 text-white font-semibold border-pink-500 shadow-sm"
-                : "hover:bg-violet-50 border-transparent text-gray-700"
+                ? "bg-gradient-to-r from-indigo-500/90 to-purple-500/90 text-white shadow-md"
+                : "hover:bg-indigo-100/80 hover:shadow-sm text-gray-700"
             }`}
+            
           >
-            {item.icon}
-            {isOpen && <span className="text-base">{item.name}</span>}
+            <span className={activeView === item.id ? "text-white" : "text-indigo-600"}>
+              {item.icon}
+            </span>
+            {isOpen && <span className="text-lg font-medium">{item.name}</span>}
           </div>
         ))}
       </div>

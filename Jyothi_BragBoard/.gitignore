@@ -44,6 +44,7 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/pnpm-debug.log*
 
+backend/uploads/
 
 .DS_Store
 Thumbs.db

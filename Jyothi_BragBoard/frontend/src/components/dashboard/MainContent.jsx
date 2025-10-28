@@ -1,7 +1,7 @@
 import DashboardContent from "./DashboardContent";
-import ShoutOutFeed from "./ShoutOutFeed";
-import ShoutOutForm from "./ShoutOutForm";
-import MyShoutOuts from "./MyShoutOuts";
+import ShoutOutFeed from "../shoutout/ShoutOutFeed";
+import ShoutOutForm from "../shoutout/ShoutOutForm";
+import MyShoutOuts from "../shoutout/MyShoutOuts";
 import Settings from "./Settings"; 
 
 const MainContent = ({ activeView, user, shoutouts, handleDeleteShout, shoutoutUpdated, handleShoutoutPosted }) => {

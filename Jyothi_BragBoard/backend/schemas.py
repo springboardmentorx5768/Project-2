@@ -62,7 +62,12 @@ class UserOut(BaseModel):
     model_config = {
         "from_attributes": True
     }
-
+    
+class UserUpdate(BaseModel):
+    username: Optional[str]
+    email: Optional[EmailStr]
+    department: Optional[str]
+    role: Optional[str]
 
 # ===== ShoutOut Schemas =====
 class ShoutOutCreate(BaseModel):
@@ -77,6 +82,8 @@ class ShoutOutCreate(BaseModel):
 
 class ShoutOutResponse(BaseModel):
     id: int
+    giver_id: int          
+    receiver_id: int 
     title: str
     message: str
     giver_name: str
@@ -89,12 +96,20 @@ class ShoutOutResponse(BaseModel):
     category: CategoryEnum
     is_public: VisibilityEnum
     created_at: datetime
+    edited_at: Optional[datetime] = None
     image_url: Optional[str] = None
 
     model_config = {
         "from_attributes": True
     }
 
+class ShoutOutUpdate(BaseModel):
+    title: Optional[str] = None
+    message: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    is_public: Optional[str] = None  # "public", "department_only", "private"
+    tagged_user_ids: Optional[List[int]] = None  
 
 class DepartmentStats(BaseModel):
     department: str

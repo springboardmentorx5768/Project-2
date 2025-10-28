@@ -36,4 +36,4 @@ def health_check(db: Session = Depends(get_db)):
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(users.router)
-app.include_router(shoutouts.router)  
+app.include_router(shoutouts.router)

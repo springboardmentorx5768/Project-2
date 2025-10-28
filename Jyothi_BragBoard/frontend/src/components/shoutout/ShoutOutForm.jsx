@@ -98,7 +98,6 @@ const ShoutOutForm = ({ currentUser, onShoutoutPosted }) => {
       setSuccessMessage("🎉 Shout-Out sent successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
 
-      // ✅ Notify parent to update feed
       if (onShoutoutPosted) onShoutoutPosted();
     } catch (err) {
       console.error("Failed to post shoutout:", err);
@@ -107,11 +106,13 @@ const ShoutOutForm = ({ currentUser, onShoutoutPosted }) => {
   };
 
   return (
-    <div className="flex-1 p-6 min-h-screen bg-gray-50">
-      <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 via-violet-500 to-indigo-500 text-transparent bg-clip-text">
-        Create Shout-Out
-      </h2>
-
+        <div className="flex-1 p-6 min-h-screen bg-gradient-to-br from-white via-indigo-50 to-purple-50">
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 via-violet-500 to-indigo-500 text-transparent bg-clip-text">
+            Create Shout-Out
+        </h2>
+        <p className="text-gray-500 mb-6">
+            Appreciate your teammates by sending a message of recognition 🌟
+        </p>
       {/* Success Message */}
       {successMessage && (
         <div className="mb-4 p-3 bg-green-100 text-green-800 border border-green-300 rounded-lg">
@@ -276,10 +277,10 @@ const ShoutOutForm = ({ currentUser, onShoutoutPosted }) => {
 
       {/* Post Button */}
       <button
-        className="w-full bg-violet-500 hover:bg-violet-600 text-white font-semibold py-3 rounded-lg transition-colors shadow-sm"
+        className="w-full bg-violet-500 hover:bg-violet-600 text-white font-semibold py-3 rounded-lg transition-all shadow-md"
         onClick={handleSubmit}
       >
-        Post Shout-Out
+        Post Shout-Out 🚀
       </button>
     </div>
   );
