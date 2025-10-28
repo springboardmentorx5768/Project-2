@@ -1,4 +1,4 @@
-**BragBoard Project – Week 1, Week 2 & Week 3 Documentation**<br><br>
+**BragBoard Project_Documentation**<br><br>
 **Project Overview**<br><br>
 BragBoard is an internal recognition tool that enables employees to appreciate their colleagues by posting shout-outs.
 It promotes a positive workplace culture by allowing tagging, commenting, and visible appreciation across the organization.Admins can oversee activities, track engagement, and moderate flagged content.<br><br>
