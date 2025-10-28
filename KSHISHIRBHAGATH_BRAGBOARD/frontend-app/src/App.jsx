@@ -1,772 +1,1139 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// ====================================================================
-// 1. MOCK DATA & UTILITIES
-// ====================================================================
-
-const mockUsers = [
-    { id: 'user-1', name: 'Alice Johnson', email: 'alice@brag.com', department: 'Engineering', profilePic: 'https://placehold.co/40x40/6366f1/ffffff?text=AJ' },
-    { id: 'user-2', name: 'Bob Smith', email: 'bob@brag.com', department: 'Marketing', profilePic: 'https://placehold.co/40x40/f97316/ffffff?text=BS' },
-    { id: 'user-3', name: 'Charlie Day', email: 'charlie@brag.com', department: 'Sales', profilePic: 'https://placehold.co/40x40/10b981/ffffff?text=CD' },
-    { id: 'user-4', name: 'Dana Scully', email: 'dana@brag.com', department: 'HR', profilePic: 'https://placehold.co/40x40/ef4444/ffffff?text=DS' },
-    { id: 'user-5', name: 'Current User', email: 'test@user.com', department: 'Engineering', profilePic: 'https://placehold.co/40x40/8b5cf6/ffffff?text=ME' },
-];
-
-const initialPosts = [
-    { id: 'p1', authorId: 'user-1', recipientId: 'user-5', message: "Huge congrats to the whole team for shipping the Q4 feature ahead of schedule! Especially great work on the backend stability.", type: 'achievement', likes: ['user-2', 'user-3'], timestamp: new Date(Date.now() - 86400000 * 2) },
-    { id: 'p2', authorId: 'user-3', recipientId: 'user-2', message: "Bob crushed the Q2 target by 150%! Truly inspirational dedication and focus. Way to go!", type: 'leadership', likes: ['user-1', 'user-5'], timestamp: new Date(Date.now() - 86400000 * 3) },
-    { id: 'p3', authorId: 'user-4', recipientId: 'user-1', message: "Alice ran an amazing internal training session on new compliance rules. Super clear and engaging!", type: 'teamwork', likes: ['user-2'], timestamp: new Date(Date.now() - 86400000) },
-    { id: 'p4', authorId: 'user-5', recipientId: 'user-4', message: "Thanks to Dana for always having a clear and positive attitude, even when things are hectic. Your support is noticed!", type: 'positivity', likes: [], timestamp: new Date() },
-];
+// --- MOCK DATA ---
+// NOTE: I've updated the mockShoutouts timestamps to be proper ISO strings
+// so they can be accurately sorted.
+const mockUsers = {
+  'employee@company.com': {
+    password: 'password123',
+    name: 'Alex Ray',
+    role: 'employee',
+    department: 'Engineering',
+    avatar: 'https://placehold.co/100x100/7E22CE/FFFFFF/png?text=AR',
+    achievements: [
+      { id: 1, text: 'Top Performer Q2' },
+      { id: 2, text: 'Innovation Award' },
+    ],
+    score: 1250,
+  },
+  'manager@company.com': {
+    password: 'password123',
+    name: 'Jordan Lee',
+    role: 'employee',
+    department: 'Engineering',
+    avatar: 'https://placehold.co/100x100/2563EB/FFFFFF/png?text=JL',
+    achievements: [{ id: 1, text: 'Project Milestone Champion' }],
+    score: 850,
+  },
+  'admin@company.com': {
+    password: 'password123',
+    name: 'Taylor Quinn',
+    role: 'admin',
+    department: 'HR',
+    avatar: 'https://placehold.co/100x100/4F46E5/FFFFFF/png?text=TQ',
+    achievements: [],
+    score: 0,
+  },
+  'sarah@company.com': {
+    password: 'password123',
+    name: 'Sarah Green',
+    role: 'employee',
+    department: 'Marketing',
+    avatar: 'https://placehold.co/100x100/10B981/FFFFFF/png?text=SG',
+    achievements: [{ id: 1, text: 'Campaign of the Quarter' }],
+    score: 980,
+  },
+};
 
 const mockDepartments = ['All', 'Engineering', 'Marketing', 'Sales', 'HR'];
 
-// Utility to format time for post cards
-const TimeAgo = ({ date }) => {
-    const timePassed = Math.round((Date.now() - date.getTime()) / 60000);
-    let timeText;
-    if (timePassed < 60) {
-        timeText = `${timePassed} min ago`;
-    } else if (timePassed < 1440) {
-        timeText = `${Math.round(timePassed / 60)} hours ago`;
+const mockShoutouts = [
+  {
+    id: 1,
+    from: 'Jordan Lee',
+    to: 'Alex Ray',
+    department: 'Engineering',
+    message:
+      'Incredible work on the new feature launch! Your dedication was key to our success.',
+    // Converted to ISO string for accurate sorting
+    timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    avatar: 'https://placehold.co/100x100/2563EB/FFFFFF/png?text=JL',
+  },
+  {
+    id: 2,
+    from: 'Taylor Quinn',
+    to: 'Sarah Green',
+    department: 'Marketing',
+    message:
+      'Huge props to Sarah for the amazing new ad campaign. The results are already speaking for themselves!',
+    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    avatar: 'https://placehold.co/100x100/4F46E5/FFFFFF/png?text=TQ',
+  },
+  {
+    id: 3,
+    from: 'Alex Ray',
+    to: 'Jordan Lee',
+    department: 'Engineering',
+    message:
+      'Thanks for the great leadership and guidance on the project. Really appreciate your support!',
+    timestamp: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+    avatar: 'https://placehold.co/100x100/7E22CE/FFFFFF/png?text=AR',
+  },
+];
+
+// Existing mockMessages is now unused but kept for reference if needed elsewhere.
+const mockMessages = [
+  {
+    id: 1,
+    from: 'Alex Ray',
+    to: 'Jordan Lee',
+    message: 'Hey Jordan, when can we discuss the Q3 budget report? Looks good!',
+    timestamp: '5 min ago',
+  },
+];
+
+const allEmployees = Object.values(mockUsers).map((u) => u.name);
+const allEmployeesData = Object.values(mockUsers);
+
+// --- UTILITY FUNCTIONS ---
+const getEmployeeAvatar = (name) => {
+  const user = allEmployeesData.find(u => u.name === name);
+  return user ? user.avatar : 'https://placehold.co/100x100/94A3B8/FFFFFF/png?text=?';
+};
+
+const timeSince = (timestamp) => {
+  const now = new Date();
+  const past = new Date(timestamp);
+  const diffInSeconds = Math.floor((now - past) / 1000);
+
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays} days ago`;
+};
+
+// --- SVG ICONS (Kept as is) ---
+const RecognitionIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-6 w-6 mr-2"
+  >
+    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+  </svg>
+);
+const UserIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+    <circle cx="12" cy="7" r="4"></circle>
+  </svg>
+);
+const LockIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+const BuildingIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="3" y1="9" x2="21" y2="9"></line>
+    <line x1="9" y1="21" x2="9" y2="9"></line>
+  </svg>
+);
+const LogoutIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5"
+  >
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+    <polyline points="16 17 21 12 16 7"></polyline>
+    <line x1="21" y1="12" x2="9" y2="12"></line>
+  </svg>
+);
+const SendIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5"
+  >
+    <line x1="22" y1="2" x2="11" y2="13"></line>
+    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+  </svg>
+);
+const TrophyIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-6 w-6 text-yellow-400"
+  >
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+    <path d="M4 22h16"></path>
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+  </svg>
+);
+const ChartIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5 mr-2"
+  >
+    <path d="M3 3v18h18"></path>
+    <path d="m19 9-5 5-4-4-3 3"></path>
+  </svg>
+);
+const ProfileIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5 mr-3"
+  >
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+const SettingsIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5 mr-3"
+  >
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.08a2 2 0 0 1 1 1.73v.2a2 2 0 0 1-1 1.73l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.07a2 2 0 0 1-1-1.73v-.2a2 2 0 0 1 1-1.73l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+// --- MAIN APP COMPONENT ---
+export default function App() {
+  const [currentPage, setCurrentPage] = useState('login'); // 'login', 'dashboard', 'messages', 'profile', 'admin'
+  const [currentUser, setCurrentUser] = useState(null); // Will hold user object on login
+  const [error, setError] = useState('');
+  const [shoutouts, setShoutouts] = useState(mockShoutouts); // Public Posts
+  const [apiUrl, setApiUrl] = useState('http://127.0.0.1:8000');
+  
+  // NOTE: Private messages state is removed as per requirements
+
+  const handleLogin = (email, password) => {
+    if (mockUsers[email] && mockUsers[email].password === password) {
+      setCurrentUser(mockUsers[email]);
+      setCurrentPage('dashboard');
+      setError('');
     } else {
-        timeText = date.toLocaleDateString();
+      setError('Invalid email or password.');
     }
-    return <span className="text-xs text-gray-500">{timeText}</span>;
-};
+  };
 
-// ====================================================================
-// 2. SVG ICONS & COMMON COMPONENTS
-// ====================================================================
+  const handleRegister = (email, password, name) => {
+    if (mockUsers[email]) {
+      setError('User with this email already exists.');
+    } else {
+      // In a real app, you would send this to the server
+      mockUsers[email] = {
+        password,
+        name,
+        role: 'employee',
+        department: 'Unassigned',
+        avatar: `https://placehold.co/100x100/CCCCCC/FFFFFF/png?text=${name.substring(
+          0,
+          1
+        )}`,
+        achievements: [],
+        score: 0,
+      };
+      setCurrentUser(mockUsers[email]);
+      setCurrentPage('dashboard');
+      setError('');
+    }
+  };
 
-const Mail = (props) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-);
-const Lock = (props) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-);
-const User = (props) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-);
-const HomeIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
-const PlusIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const BarChartIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
-const LogOutIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
-const AwardIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 18 17 23 15.79 13.89"></polyline></svg>;
-const HeartIcon = ({ className, filled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} fill={filled ? 'currentColor' : 'none'}>
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
-    </svg>
-);
-const BragboardIcon = ({ className = 'h-6 w-6' }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-);
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentPage('login');
+  };
+  
+  // --- NEW HANDLER FOR PUBLIC POSTING (Shoutouts) ---
+  const handleNewPublicPost = ({ to, message }) => {
+    const newShoutout = {
+      id: Date.now(),
+      from: currentUser.name,
+      to: to,
+      department: currentUser.department,
+      message: message,
+      timestamp: new Date().toISOString(), // Use current ISO time for accurate sorting
+      avatar: currentUser.avatar,
+    };
+    
+    // 1. Post directly to the public feed (shoutouts)
+    // The new post will immediately appear on the Dashboard and the PublicPostPage's "Recently Posted" column
+    setShoutouts((prev) => 
+      [newShoutout, ...prev] // New posts appear at the top
+      // Note: In a real app, you'd make an API call here.
+    ); 
+  };
+  // -----------------------------------------------------
 
-// Reusable Input Field Component
-const AuthInput = ({ type, name, placeholder, icon: Icon, value, onChange, disabled = false }) => (
-    <div className="relative mb-4">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Icon className="h-5 w-5 text-gray-400" />
-        </div>
-        <input
-            type={type}
-            name={name}
-            placeholder={placeholder}
-            value={value}
-            onChange={onChange}
-            required
-            disabled={disabled}
-            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 shadow-sm text-sm 
-                ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white border-gray-300'}`}
+  const renderPage = () => {
+    if (currentPage === 'login') {
+      return (
+        <LoginPage
+          onLogin={handleLogin}
+          onNavigateToRegister={() => setCurrentPage('register')}
+          error={error}
         />
-    </div>
-);
-
-const PrimaryButton = ({ children, onClick, type = 'button', disabled = false, className = '' }) => (
-    <button
-        type={type}
-        onClick={onClick}
-        disabled={disabled}
-        className={`w-full py-3 px-4 rounded-xl text-white font-semibold bg-indigo-600 hover:bg-indigo-700 transition duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-    >
-        {children}
-    </button>
-);
-
-const SuccessButton = ({ children, onClick, type = 'button', disabled = false, className = '' }) => (
-    <button
-        type={type}
-        onClick={onClick}
-        disabled={disabled}
-        className={`w-full py-3 px-4 rounded-xl text-white font-semibold bg-emerald-600 hover:bg-emerald-700 transition duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-    >
-        {children}
-    </button>
-);
-
-const AuthLayout = ({ title, children }) => (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-500/10 via-purple-500/20 to-pink-500/10 p-4">
-        <div className="w-full max-w-md bg-white/90 backdrop-blur-md border border-white/40 shadow-xl rounded-2xl p-8 space-y-6">
-            <div className="text-center">
-                 <div className="flex justify-center items-center mb-4 text-indigo-600">
-                    <BragboardIcon className="h-8 w-8 mr-2" />
-                    <h1 className="text-3xl font-extrabold text-gray-800">Bragboard</h1>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-            </div>
-            {children}
-        </div>
-    </div>
-);
-
-// Auth Message Box (for notifications)
-const MessageBox = ({ msg, type, onClose }) => (
-    <div 
-        className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
-    >
-        <div className="flex items-center justify-between">
-            <span>{msg}</span>
-            <button onClick={onClose} className="ml-4 text-white font-bold opacity-70 hover:opacity-100">&times;</button>
-        </div>
-    </div>
-);
-
-// ====================================================================
-// 3. PAGE COMPONENTS (REPLACEMENT FOR PAGES FOLDER)
-// ====================================================================
-
-/**
- * --- LOGIN PAGE ---
- * Handles login form and mock API calls.
- */
-const LoginPage = ({ setRoute, onLoginSuccess, setAuthMessage }) => {
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        setAuthMessage({ message: null, type: null });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setAuthMessage({ message: null, type: null });
-
-        // --- MOCK API CALL ---
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
-
-        if (formData.email === 'test@user.com' && formData.password === 'password123') {
-             const mockUser = mockUsers.find(u => u.email === 'test@user.com');
-             localStorage.setItem('token', 'mock-token-12345');
-             setIsLoading(false);
-             onLoginSuccess({ message: 'Successfully logged in.', type: 'success', user: mockUser });
-        } else {
-             setIsLoading(false);
-             setAuthMessage({ message: 'Login failed. Use test@user.com / password123.', type: 'error' });
-        }
-    };
-
-    return (
-        <AuthLayout title="Sign In">
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <AuthInput
-                    type="email" name="email" placeholder="Email (e.g., test@user.com)" icon={Mail}
-                    value={formData.email} onChange={handleChange} disabled={isLoading}
-                />
-                <AuthInput
-                    type="password" name="password" placeholder="Password (e.g., password123)" icon={Lock}
-                    value={formData.password} onChange={handleChange} disabled={isLoading}
-                />
-                <PrimaryButton type="submit" disabled={isLoading}>
-                    {isLoading ? 'Signing In...' : 'Sign In'}
-                </PrimaryButton>
-                <div className="text-center pt-2 text-sm text-gray-600">
-                    Don't have an account? {' '}
-                    <span className="text-indigo-600 font-medium cursor-pointer hover:text-indigo-800 transition" onClick={() => setRoute('register')}>
-                        Register here
-                    </span>
-                </div>
-            </form>
-        </AuthLayout>
-    );
-};
-
-/**
- * --- REGISTER PAGE ---
- * Handles registration form and mock API calls.
- */
-const RegisterPage = ({ setRoute, onRegisterSuccess, setAuthMessage }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        setAuthMessage({ message: null, type: null });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setAuthMessage({ message: null, type: null });
-
-        if (formData.password !== formData.confirmPassword) {
-            setAuthMessage({ message: 'Error: Passwords do not match.', type: 'error' });
-            setIsLoading(false);
-            return;
-        }
-
-        // --- MOCK API CALL ---
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Mock Success
-        setIsLoading(false);
-        onRegisterSuccess({ message: `Success! ${formData.email} registered. Please sign in.`, type: 'success' });
-    };
-
-    return (
-        <AuthLayout title="Create Account">
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <AuthInput
-                    type="text" name="name" placeholder="Full Name" icon={User}
-                    value={formData.name} onChange={handleChange} disabled={isLoading}
-                />
-                <AuthInput
-                    type="email" name="email" placeholder="Email Address" icon={Mail}
-                    value={formData.email} onChange={handleChange} disabled={isLoading}
-                />
-                <AuthInput
-                    type="password" name="password" placeholder="Password (min 8 characters)" icon={Lock}
-                    value={formData.password} onChange={handleChange} disabled={isLoading}
-                />
-                <AuthInput
-                    type="password" name="confirmPassword" placeholder="Confirm Password" icon={Lock}
-                    value={formData.confirmPassword} onChange={handleChange} disabled={isLoading}
-                />
-                <SuccessButton type="submit" disabled={isLoading}>
-                    {isLoading ? 'Creating Account...' : 'Create Account'}
-                </SuccessButton>
-                <div className="text-center pt-2 text-sm text-gray-600">
-                    Already have an account? {' '}
-                    <span className="text-indigo-600 font-medium cursor-pointer hover:text-indigo-800 transition" onClick={() => setRoute('login')}>
-                        Sign in
-                    </span>
-                </div>
-            </form>
-        </AuthLayout>
-    );
-};
-
-// --- Sub-Components of Dashboard ---
-
-const PostCard = ({ post, user, onLike }) => {
-    const recipient = mockUsers.find(u => u.id === post.recipientId);
-    const author = mockUsers.find(u => u.id === post.authorId);
-    const isLiked = post.likes.includes(user.id);
-
-    const getIcon = (type) => {
-        switch (type) {
-            case 'achievement': return <AwardIcon className="h-6 w-6 text-yellow-500" />;
-            case 'leadership': return <AwardIcon className="h-6 w-6 text-red-500" />;
-            case 'teamwork': return <AwardIcon className="h-6 w-6 text-blue-500" />;
-            case 'positivity': return <AwardIcon className="h-6 w-6 text-green-500" />;
-            default: return <AwardIcon className="h-6 w-6 text-indigo-500" />;
-        }
+      );
+    }
+    if (currentPage === 'register') {
+      return (
+        <RegisterPage
+          onRegister={handleRegister}
+          onNavigateToLogin={() => setCurrentPage('login')}
+          error={error}
+        />
+      );
+    }
+    if (currentUser) {
+      if (currentPage === 'dashboard') {
+        return (
+          <Dashboard
+            user={currentUser}
+            onLogout={handleLogout}
+            shoutouts={shoutouts} // Pass updated shoutouts
+            setCurrentPage={setCurrentPage}
+          />
+        );
+      }
+      if (currentPage === 'messages') { // Renamed internally to PublicPostPage
+        return (
+          <PublicPostPage 
+            user={currentUser}
+            setCurrentPage={setCurrentPage}
+            shoutouts={shoutouts} // Pass shoutouts to display recent ones
+            handleNewPost={handleNewPublicPost} // Pass the public posting function
+          />
+        );
+      }
+      if (currentPage === 'profile') {
+        return (
+          <ProfilePage
+            user={currentUser}
+            setCurrentPage={setCurrentPage}
+            apiUrl={apiUrl}
+            setApiUrl={setApiUrl}
+          />
+        );
+      }
+      if (currentPage === 'analytics' && currentUser.role === 'admin') {
+        return (
+          <Dashboard
+            user={currentUser}
+            onLogout={handleLogout}
+            shoutouts={shoutouts}
+            setCurrentPage={setCurrentPage}
+          />
+        ); // Admin's dashboard is reused for now
+      }
     }
 
+    // Default back to login
     return (
-        <div className="glass-card p-6 mb-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-100/50">
-            <div className="flex items-center space-x-3 mb-4">
-                <img src={recipient.profilePic} alt={recipient.name} className="h-12 w-12 rounded-full border-2 border-indigo-400" />
-                <div>
-                    <h3 className="text-lg font-bold text-gray-800 flex items-center">
-                        {getIcon(post.type)}
-                        <span className="ml-2">{recipient.name}</span>
+      <LoginPage
+        onLogin={handleLogin}
+        onNavigateToRegister={() => setCurrentPage('register')}
+        error={error}
+      />
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+      {renderPage()}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------
+// --- AUTH PAGES (Shadow Fix Applied) ---
+// ----------------------------------------------------------------------
+const AuthLayout = ({ title, children }) => (
+  // Shadow Fix: Simplified background gradient and reduced the shadow strength on the card (shadow-2xl -> shadow-lg)
+  <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-indigo-500 to-purple-500 p-4">
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 space-y-6">
+      <div className="text-center">
+        <div className="flex justify-center items-center mb-4">
+          <RecognitionIcon />
+          <h1 className="text-2xl font-bold text-gray-800">Recognition+</h1>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-900">{title}</h2>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
+function LoginPage({ onLogin, onNavigateToRegister, error }) {
+  const [email, setEmail] = useState('employee@company.com');
+  const [password, setPassword] = useState('password123');
+  const [department, setDepartment] = useState('Engineering'); // Department is unused in logic but kept for form consistency
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(email, password);
+  };
+
+  return (
+    <AuthLayout title="Welcome Back!">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        <div className="relative">
+          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+        </div>
+        <div className="relative">
+          <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+        </div>
+        <div className="relative">
+          <BuildingIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <select
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            required
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition appearance-none bg-white"
+          >
+            {mockDepartments.slice(1).map((dep) => (
+              <option key={dep} value={dep}>
+                {dep} Department
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ease-in-out transform hover:-translate-y-1"
+          >
+            Sign In
+          </button>
+        </div>
+      </form>
+      <p className="text-center text-sm text-gray-600 mt-4">
+        Don't have an account?{' '}
+        <button
+          onClick={onNavigateToRegister}
+          className="font-medium text-indigo-600 hover:text-indigo-500"
+        >
+          Sign up
+        </button>
+      </p>
+    </AuthLayout>
+  );
+}
+
+function RegisterPage({ onRegister, onNavigateToLogin, error }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onRegister(email, password, name);
+  };
+
+  return (
+    <AuthLayout title="Create Your Account">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        <div className="relative">
+          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+        </div>
+        <div className="relative">
+          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+        </div>
+        <div className="relative">
+          <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+        </div>
+        <div>
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ease-in-out transform hover:-translate-y-1"
+          >
+            Create Account
+          </button>
+        </div>
+      </form>
+      <p className="text-center text-sm text-gray-600 mt-4">
+        Already have an account?{' '}
+        <button
+          onClick={onNavigateToLogin}
+          className="font-medium text-indigo-600 hover:text-indigo-500"
+        >
+          Sign in
+        </button>
+      </p>
+    </AuthLayout>
+  );
+}
+
+// ----------------------------------------------------------------------
+// --- DASHBOARD & SIDEBAR (Core Layout) ---
+// ----------------------------------------------------------------------
+function Dashboard({ user, onLogout, shoutouts, setCurrentPage }) {
+  
+  // Sort shoutouts from newest to oldest based on ISO timestamp
+  const sortedShoutouts = [...shoutouts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar user={user} onLogout={onLogout} currentPage="dashboard" setCurrentPage={setCurrentPage} />
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+        {user.role === 'admin' ? (
+          <AdminDashboard user={user} shoutouts={sortedShoutouts} />
+        ) : (
+          <EmployeeDashboard user={user} shoutouts={sortedShoutouts} />
+        )}
+      </main>
+    </div>
+  );
+}
+
+const Sidebar = ({ user, onLogout, currentPage, setCurrentPage }) => (
+  <aside className="w-64 bg-white shadow-lg flex flex-col">
+    <div className="flex items-center justify-center p-6 border-b">
+      <RecognitionIcon />
+      <h1 className="text-xl font-bold text-gray-800 ml-2">Recognition+</h1>
+    </div>
+    <nav className="flex-1 px-4 py-6 space-y-2">
+      <NavItem
+        title="Dashboard"
+        page="dashboard"
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        icon={
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-3"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+          </svg>
+        }
+      />
+      <NavItem
+        title="Post Message" // Renamed from "Messages" to "Post Message" for clarity
+        page="messages"
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        icon={
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-3"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+          </svg>
+        }
+      />
+      {user.role === 'admin' && (
+        <NavItem
+          title="Analytics"
+          page="analytics"
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          icon={<ChartIcon />}
+        />
+      )}
+      <NavItem
+        title="Profile"
+        page="profile"
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        icon={<ProfileIcon />}
+      />
+    </nav>
+    <div className="p-4 border-t">
+      <div className="flex items-center">
+        <img
+          src={user.avatar}
+          alt="User Avatar"
+          className="h-10 w-10 rounded-full object-cover"
+        />
+        <div className="ml-3">
+          <p className="font-semibold text-sm text-gray-800">{user.name}</p>
+          <p className="text-xs text-gray-500">{user.department}</p>
+        </div>
+      </div>
+      <button
+        onClick={onLogout}
+        className="w-full mt-4 flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+      >
+        <LogoutIcon />
+        <span className="ml-2">Logout</span>
+      </button>
+    </div>
+  </aside>
+);
+
+const NavItem = ({ title, page, currentPage, setCurrentPage, icon }) => (
+  <button
+    onClick={() => setCurrentPage(page)}
+    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors duration-150 ${
+      currentPage === page
+        ? 'text-gray-900 bg-gray-200 font-semibold'
+        : 'text-gray-600 hover:bg-gray-100'
+    }`}
+  >
+    {icon}
+    {title}
+  </button>
+);
+
+// --- UTILITY COMPONENTS ---
+const DashboardHeader = ({ title, subtitle }) => (
+  <div className="mb-8">
+    <h1 className="text-4xl font-bold text-gray-800">{title}</h1>
+    <p className="text-gray-500 mt-1">{subtitle}</p>
+  </div>
+);
+
+const DashboardCard = ({ children, className = '' }) => (
+  <div className={`bg-white rounded-2xl shadow-md p-6 ${className}`}>
+    {children}
+  </div>
+);
+
+// --- EMPLOYEE DASHBOARD (Updated to use sorted Shoutouts) ---
+function EmployeeDashboard({ user, shoutouts }) {
+    // Only shows the 5 most recent shoutouts on the main dashboard feed for simplicity
+    const recentFeed = shoutouts.slice(0, 5);
+    
+    // Sort employees by score for Leaderboard (descending)
+    const leaderboard = allEmployeesData
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+
+    return (
+        <>
+            <DashboardHeader 
+                title={`Welcome, ${user.name}!`}
+                subtitle="View the latest company shoutouts and your standing."
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* User Score Card */}
+                <DashboardCard className="md:col-span-1 flex flex-col justify-between">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <TrophyIcon /> Your Recognition Score
                     </h3>
-                    <p className="text-sm text-gray-500">
-                        From: {author.name}
-                    </p>
-                </div>
-            </div>
-            <p className="text-gray-700 mb-4 border-l-4 border-indigo-500 pl-3 py-1 bg-indigo-50/50 rounded-sm">
-                "{post.message}"
-            </p>
-            <div className="flex justify-between items-center text-sm">
-                <button
-                    onClick={() => onLike(post.id, user.id)}
-                    className="flex items-center space-x-1 font-medium text-gray-600 hover:text-red-500 transition"
-                >
-                    <HeartIcon className={`h-5 w-5 transition ${isLiked ? 'text-red-500' : 'text-gray-400'}`} filled={isLiked} />
-                    <span>{post.likes.length} Likes</span>
-                </button>
-                <TimeAgo date={post.timestamp} />
-            </div>
-        </div>
-    );
-};
-
-/**
- * --- FEED PAGE ---
- * Shows the main list of posts with filtering.
- */
-const FeedPage = ({ posts, currentUser, onLike, setRoute }) => {
-    const [filter, setFilter] = useState('All');
-
-    const filteredPosts = useMemo(() => {
-        let result = posts.sort((a, b) => b.timestamp - a.timestamp);
-        if (filter === 'All') return result;
-
-        return result.filter(p => {
-            const recipient = mockUsers.find(u => u.id === p.recipientId);
-            return recipient && recipient.department === filter;
-        });
-    }, [posts, filter]);
-
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center flex-wrap gap-4 p-4 bg-white rounded-xl shadow-md border border-gray-100">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                    <AwardIcon className="h-6 w-6 mr-2 text-indigo-500" />
-                    Company Feed
-                </h2>
-                <PrimaryButton onClick={() => setRoute('createPost')} className="w-auto px-4 py-2">
-                    <PlusIcon className="h-5 w-5 inline mr-2" />
-                    New Post
-                </PrimaryButton>
-            </div>
-            
-            <div className="flex space-x-2 overflow-x-auto pb-2">
-                {mockDepartments.map(dept => (
-                    <button
-                        key={dept}
-                        onClick={() => setFilter(dept)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition duration-150 ${
-                            filter === dept
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'bg-white text-gray-700 hover:bg-indigo-100 border border-gray-200'
-                        }`}
-                    >
-                        {dept}
-                    </button>
-                ))}
-            </div>
-
-            <div className="max-w-3xl mx-auto">
-                {filteredPosts.length > 0 ? (
-                    filteredPosts.map(post => (
-                        <PostCard key={post.id} post={post} user={currentUser} onLike={onLike} />
-                    ))
-                ) : (
-                    <div className="text-center p-10 bg-white/70 rounded-xl text-gray-500">No posts found in this department yet.</div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-/**
- * --- CREATE POST PAGE ---
- * Form to create a new brag post.
- */
-const CreatePostPage = ({ setRoute, onPost, currentUser }) => {
-    const [recipient, setRecipient] = useState('');
-    const [message, setMessage] = useState('');
-    const [type, setType] = useState('achievement');
-    const [error, setError] = useState(null);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setError(null);
-
-        if (recipient === currentUser.id) {
-            setError("You cannot send a post to yourself!");
-            return;
-        }
-
-        if (!recipient || !message || !type) {
-             setError("Please fill out all fields.");
-             return;
-        }
-        
-        onPost({ recipientId: recipient, message, type, authorId: currentUser.id });
-        setRoute('feed');
-    };
-
-    const recipientOptions = mockUsers.filter(u => u.id !== currentUser.id);
-
-    return (
-        <div className="max-w-2xl mx-auto glass-card p-8 bg-white/90">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">Send a Brag</h2>
-            {error && <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-lg">{error}</div>}
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-                
-                <div className="space-y-2">
-                    <label htmlFor="recipient" className="block text-sm font-medium text-gray-700">Recipient</label>
-                    <select
-                        id="recipient"
-                        value={recipient}
-                        onChange={(e) => setRecipient(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg py-3 px-3 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                        required
-                    >
-                        <option value="" disabled>Select an employee</option>
-                        {recipientOptions.map(u => (
-                            <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="space-y-2">
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type of Brag</label>
-                    <div className="flex flex-wrap gap-3">
-                        {['achievement', 'leadership', 'teamwork', 'positivity'].map(t => (
-                            <button
-                                type="button"
-                                key={t}
-                                onClick={() => setType(t)}
-                                className={`px-4 py-2 rounded-full text-sm font-semibold capitalize transition duration-150 ${
-                                    type === t
-                                        ? 'bg-indigo-600 text-white shadow-md'
-                                        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                                }`}
-                            >
-                                {t}
-                            </button>
-                        ))}
+                    <div className="text-center my-6">
+                        <p className="text-6xl font-extrabold text-indigo-600">{user.score}</p>
+                        <p className="text-gray-500 mt-1">Total Points</p>
                     </div>
-                </div>
+                    <div className="border-t pt-4">
+                        <h4 className="font-semibold text-gray-700 mb-2">Recent Achievements:</h4>
+                        <ul className="space-y-1 text-sm text-gray-600">
+                            {user.achievements.length > 0 ? (
+                                user.achievements.map(ach => (
+                                    <li key={ach.id} className="flex items-center">
+                                        <span className="text-indigo-500 mr-2">•</span>{ach.text}
+                                    </li>
+                                ))
+                            ) : (<li className="text-gray-400">No achievements yet.</li>)}
+                        </ul>
+                    </div>
+                </DashboardCard>
 
-                <div className="space-y-2">
-                    <label htmlFor="message" className="block text-sm font-medium text-gray-700">Message</label>
-                    <textarea
-                        id="message"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        rows="4"
-                        placeholder="What are they being recognized for?"
-                        className="w-full border border-gray-300 rounded-lg py-3 px-3 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                        required
-                    />
-                </div>
-                
-                <div className="flex space-x-4">
-                    <PrimaryButton type="submit" className="w-2/3">
-                        Submit Brag
-                    </PrimaryButton>
-                    <button type="button" onClick={() => setRoute('feed')} className="w-1/3 py-3 px-4 rounded-xl text-gray-600 font-semibold bg-gray-200 hover:bg-gray-300 transition duration-200 shadow-md">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-};
-
-/**
- * --- STATS PAGE ---
- * Shows the user's personal statistics.
- */
-const StatsPage = ({ posts, currentUser }) => {
-    const receivedPosts = posts.filter(p => p.recipientId === currentUser.id);
-    const givenPosts = posts.filter(p => p.authorId === currentUser.id);
-    const totalLikesReceived = receivedPosts.reduce((acc, p) => acc + p.likes.length, 0);
-
-    const typeBreakdown = receivedPosts.reduce((acc, p) => {
-        acc[p.type] = (acc[p.type] || 0) + 1;
-        return acc;
-    }, {});
-    const sortedTypes = Object.entries(typeBreakdown).sort(([, a], [, b]) => b - a);
-
-    const StatCard = ({ title, value, icon, bgColor, textColor }) => (
-        <div className={`p-6 rounded-2xl shadow-lg border border-gray-100/50 ${bgColor} flex items-center justify-between`}>
-            <div>
-                <p className="text-sm font-medium text-gray-600 uppercase">{title}</p>
-                <p className={`text-4xl font-extrabold mt-1 ${textColor}`}>{value}</p>
-            </div>
-            <div className={`p-3 rounded-full ${bgColor.replace('bg-', 'bg-')}/50`}>
-                {icon}
-            </div>
-        </div>
-    );
-
-    return (
-        <div className="space-y-8 p-4">
-            <h2 className="text-3xl font-bold text-gray-800 border-b pb-2 mb-6">Your Bragboard Statistics</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard 
-                    title="Total Brags Received"
-                    value={receivedPosts.length}
-                    icon={<AwardIcon className="h-8 w-8 text-indigo-600" />}
-                    bgColor="bg-white"
-                    textColor="text-indigo-600"
-                />
-                 <StatCard 
-                    title="Total Brags Given"
-                    value={givenPosts.length}
-                    icon={<PlusIcon className="h-8 w-8 text-emerald-600" />}
-                    bgColor="bg-white"
-                    textColor="text-emerald-600"
-                />
-                <StatCard 
-                    title="Total Likes Received"
-                    value={totalLikesReceived}
-                    icon={<HeartIcon className="h-8 w-8 text-red-600" filled />}
-                    bgColor="bg-white"
-                    textColor="text-red-600"
-                />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="glass-card p-6 bg-white/90">
-                    <h3 className="text-xl font-bold mb-4 text-gray-800 flex items-center">
-                        <BarChartIcon className="h-5 w-5 mr-2 text-indigo-500" />
-                        Brags Received by Type
+                {/* Public Shoutout Feed (Updated to show public posts) */}
+                <DashboardCard className="md:col-span-2">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
+                        Recent Public Shoutouts (Company Feed)
                     </h3>
-                    <div className="space-y-4">
-                        {sortedTypes.length > 0 ? (
-                            sortedTypes.map(([type, count]) => (
-                                <div key={type} className="flex justify-between items-center">
-                                    <span className="capitalize text-gray-700 font-medium">{type}</span>
-                                    <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-bold">{count}</span>
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                        {recentFeed.length > 0 ? (
+                            recentFeed.map(shoutout => (
+                                <div key={shoutout.id} className="flex p-4 bg-gray-50 rounded-lg shadow-sm">
+                                    <img src={shoutout.avatar} alt={shoutout.from} className="h-10 w-10 rounded-full mr-4 object-cover" />
+                                    <div className='flex-1'>
+                                        <p className="text-sm">
+                                            <span className="font-semibold text-indigo-600">{shoutout.from}</span> gave a shoutout to <span className="font-bold text-gray-800">{shoutout.to}</span>
+                                        </p>
+                                        <p className="text-gray-700 mt-1">{shoutout.message}</p>
+                                        <small className="text-xs text-gray-500">{timeSince(shoutout.timestamp)}</small>
+                                    </div>
                                 </div>
                             ))
-                        ) : (
-                            <p className="text-gray-500">You haven't received any brags yet.</p>
-                        )}
+                        ) : (<p className="text-center text-gray-500 pt-10">No public posts yet. Be the first!</p>)}
                     </div>
-                </div>
+                </DashboardCard>
+                
+                {/* Leaderboard */}
+                <DashboardCard className="md:col-span-3">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top Performers Leaderboard</h3>
+                    <ul className="space-y-3">
+                        {leaderboard.map((emp, index) => (
+                            <li key={emp.name} className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                                <div className="flex items-center">
+                                    <span className={`text-lg font-bold mr-4 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-500' : index === 2 ? 'text-amber-700' : 'text-gray-600'}`}>{index + 1}.</span>
+                                    <img src={emp.avatar} alt={emp.name} className="h-8 w-8 rounded-full object-cover mr-3" />
+                                    <div>
+                                        <p className="font-semibold">{emp.name}</p>
+                                        <p className="text-xs text-indigo-700">{emp.department}</p>
+                                    </div>
+                                </div>
+                                <div className="text-lg font-bold text-indigo-800">{emp.score} pts</div>
+                            </li>
+                        ))}
+                    </ul>
+                </DashboardCard>
+
             </div>
-        </div>
+        </>
     );
-};
+}
 
-/**
- * --- DASHBOARD LAYOUT (AUTHENTICATED ROUTE CONTAINER) ---
- * Provides the fixed header, navigation, and renders the specific internal page (Feed, Stats, Create).
- * This acts as the <Dashboard /> component from the old structure.
- */
-const DashboardLayout = ({ user, posts, setPosts, setAuthStatus, currentRoute, setRoute }) => {
-    
-    // Logic for global state changes
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        setAuthStatus('login');
-    };
-
-    const handleLike = (postId, userId) => {
-        setPosts(prevPosts => prevPosts.map(p => {
-            if (p.id === postId) {
-                const isLiked = p.likes.includes(userId);
-                return {
-                    ...p,
-                    likes: isLiked
-                        ? p.likes.filter(id => id !== userId)
-                        : [...p.likes, userId]
-                };
-            }
-            return p;
-        }));
-    };
-
-    const handleNewPost = (newPostData) => {
-        const newPost = {
-            ...newPostData,
-            id: `p${Date.now()}`,
-            likes: [],
-            timestamp: new Date(),
-        };
-        setPosts(prevPosts => [newPost, ...prevPosts]);
-    };
-
-    // Routing Logic for the authenticated area
-    let content;
-    switch (currentRoute) {
-        case 'feed':
-            content = <FeedPage posts={posts} currentUser={user} onLike={handleLike} setRoute={setRoute} />;
-            break;
-        case 'createPost':
-            content = <CreatePostPage setRoute={setRoute} onPost={handleNewPost} currentUser={user} />;
-            break;
-        case 'stats':
-            content = <StatsPage posts={posts} currentUser={user} />;
-            break;
-        default:
-            // Fallback/Redirect for base path
-            content = <FeedPage posts={posts} currentUser={user} onLike={handleLike} setRoute={setRoute} />;
-            break;
-    }
-
+// --- ADMIN DASHBOARD (Unchanged Logic, uses sorted Shoutouts) ---
+function AdminDashboard({ user, shoutouts }) {
+    // Admin content can be further developed, currently reuses EmployeeDashboard features
     return (
-        <div className="min-h-screen bg-gray-50 font-sans">
-            {/* Header */}
-            <header className="sticky top-0 z-10 bg-white shadow-md border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <div className="flex items-center space-x-2 text-indigo-600">
-                        <BragboardIcon className="h-8 w-8" />
-                        <h1 className="text-2xl font-extrabold text-gray-800">Bragboard</h1>
+        <>
+            <DashboardHeader 
+                title={`Admin Panel - Welcome, ${user.name}!`}
+                subtitle="Overview of company recognition and analytics."
+            />
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Example Admin Metric Card */}
+                <DashboardCard className="md:col-span-1">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">Total Shoutouts</h3>
+                    <p className="text-6xl font-extrabold text-green-600">{shoutouts.length}</p>
+                    <p className="text-gray-500 mt-1">Since last quarter</p>
+                </DashboardCard>
+                
+                {/* Admin Feed */}
+                <DashboardCard className="md:col-span-2">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
+                        All Public Shoutout Feed
+                    </h3>
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                        {shoutouts.map(shoutout => (
+                            <div key={shoutout.id} className="flex p-4 bg-gray-50 rounded-lg shadow-sm">
+                                <img src={shoutout.avatar} alt={shoutout.from} className="h-10 w-10 rounded-full mr-4 object-cover" />
+                                <div className='flex-1'>
+                                    <p className="text-sm">
+                                        <span className="font-semibold text-indigo-600">{shoutout.from}</span> to <span className="font-bold text-gray-800">{shoutout.to}</span>
+                                    </p>
+                                    <p className="text-gray-700 mt-1">{shoutout.message}</p>
+                                    <small className="text-xs text-gray-500">{timeSince(shoutout.timestamp)}</small>
+                                </div>
+                            </div>
+                        ))}
+                        {shoutouts.length === 0 && <p className="text-center text-gray-500 pt-10">No public posts yet.</p>}
                     </div>
-                    
-                    <div className="hidden md:flex items-center space-x-4">
-                        <button
-                            onClick={() => setRoute('feed')}
-                            className={`flex items-center px-4 py-2 rounded-lg font-medium transition ${currentRoute === 'feed' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                            <HomeIcon className="h-5 w-5 mr-1" /> Feed
-                        </button>
-                        <button
-                            onClick={() => setRoute('stats')}
-                            className={`flex items-center px-4 py-2 rounded-lg font-medium transition ${currentRoute === 'stats' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                            <BarChartIcon className="h-5 w-5 mr-1" /> Stats
-                        </button>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                        <div className="text-sm font-medium text-gray-700 hidden sm:block">Welcome, {user.name}</div>
-                        <img src={user.profilePic} alt={user.name} className="h-10 w-10 rounded-full border-2 border-indigo-500" />
-                        <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 p-2 rounded-full transition duration-150">
-                            <LogOutIcon className="h-6 w-6" />
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            {/* Mobile Nav */}
-            <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t z-20 shadow-lg flex justify-around p-2">
-                <button
-                    onClick={() => setRoute('feed')}
-                    className={`flex flex-col items-center p-2 rounded-lg transition ${currentRoute === 'feed' ? 'text-indigo-600' : 'text-gray-500'}`}
-                >
-                    <HomeIcon className="h-6 w-6" />
-                    <span className="text-xs">Feed</span>
-                </button>
-                <button
-                    onClick={() => setRoute('createPost')}
-                    className="flex flex-col items-center p-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-lg -mt-4 transition duration-200"
-                    style={{ width: '56px', height: '56px', justifyContent: 'center' }}
-                >
-                    <PlusIcon className="h-6 w-6" />
-                </button>
-                <button
-                    onClick={() => setRoute('stats')}
-                    className={`flex flex-col items-center p-2 rounded-lg transition ${currentRoute === 'stats' ? 'text-indigo-600' : 'text-gray-500'}`}
-                >
-                    <BarChartIcon className="h-6 w-6" />
-                    <span className="text-xs">Stats</span>
-                </button>
+                </DashboardCard>
             </div>
-
-
-            {/* Main Content Area */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
-                {content}
-            </main>
-        </div>
+        </>
     );
-};
+}
 
 
-// ====================================================================
-// 4. MAIN APPLICATION ROOT (The Router)
-// ====================================================================
+// ----------------------------------------------------------------------
+// --- PUBLIC POST PAGE (Renamed and Updated from MessagesPage) ---
+// ----------------------------------------------------------------------
+function PublicPostPage({ user, setCurrentPage, shoutouts, handleNewPost }) {
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [showEmployeeList, setShowEmployeeList] = useState(false);
+  const [recipient, setRecipient] = useState('All'); // Default recipient to 'All' for public post
+  const inputRef = useRef(null);
 
-/**
- * The main App component acting as the application router and global state provider.
- */
-export default function App() {
-    const [currentRoute, setCurrentRoute] = useState(
-        localStorage.getItem('token') ? 'feed' : 'login'
-    );
-    const [currentUser, setCurrentUser] = useState(
-        mockUsers.find(u => u.email === 'test@user.com') || mockUsers[0]
-    );
-    const [posts, setPosts] = useState(initialPosts);
-    const [authMessage, setAuthMessage] = useState({ message: null, type: null });
+  // Filter and sort shoutouts to get the 5 most recent
+  const sortedShoutouts = [...shoutouts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const recentlyPosted = sortedShoutouts.slice(0, 5);
 
-    // Handles the successful login event
-    const handleLoginSuccess = (data) => {
-        // Find the user from mock data based on the successful mock login
-        const loggedInUser = mockUsers.find(u => u.email === 'test@user.com');
-        setCurrentUser(loggedInUser);
-        setCurrentRoute('feed'); // Route to the main feed after login
-        setAuthMessage({ message: data.message, type: data.type });
-    };
-
-    // Handles successful registration event
-    const handleRegisterSuccess = (data) => {
-        setAuthMessage({ message: data.message, type: data.type });
-        setCurrentRoute('login'); // Route back to login after registration
-    };
+  const handleMessageChange = (e) => {
+    const value = e.target.value;
+    setCurrentMessage(value);
     
-    // Effect to auto-dismiss messages
-    useEffect(() => {
-        let timer;
-        if (authMessage.message) {
-            timer = setTimeout(() => {
-                setAuthMessage({ message: null, type: null });
-            }, 5000);
+    // Simple check to show employee list when typing '@'
+    if (value.includes('@') && !value.endsWith(' ')) {
+        setShowEmployeeList(true);
+    } else {
+        setShowEmployeeList(false);
+    }
+  };
+
+  const handleSelectEmployee = (employeeName) => {
+    // Replace the '@' (and potential partial name) with the selected name
+    const newRecipient = employeeName === 'All' ? 'All' : employeeName;
+    setRecipient(newRecipient);
+    
+    // If selecting an individual, replace the '@' and add their name
+    let newMessage = currentMessage;
+    if (newRecipient !== 'All') {
+        const lastAt = currentMessage.lastIndexOf('@');
+        if (lastAt !== -1) {
+            newMessage = currentMessage.substring(0, lastAt) + `@${employeeName} `;
+        } else {
+            newMessage += `@${employeeName} `;
         }
-        return () => clearTimeout(timer);
-    }, [authMessage.message]);
+    }
+    
+    setCurrentMessage(newMessage);
+    setShowEmployeeList(false);
+    inputRef.current.focus();
+  };
 
+  const handleSend = () => {
+    if (!currentMessage.trim()) return;
 
-    let renderedPage;
-    switch (currentRoute) {
-        case 'login':
-            renderedPage = (
-                <LoginPage 
-                    setRoute={setCurrentRoute} 
-                    onLoginSuccess={handleLoginSuccess}
-                    setAuthMessage={setAuthMessage}
-                />
-            );
-            break;
-        case 'register':
-            renderedPage = (
-                <RegisterPage
-                    setRoute={setCurrentRoute}
-                    onRegisterSuccess={handleRegisterSuccess}
-                    setAuthMessage={setAuthMessage}
-                />
-            );
-            break;
-        case 'feed':
-        case 'createPost':
-        case 'stats':
-            // These routes use the Dashboard layout
-            renderedPage = (
-                <DashboardLayout 
-                    user={currentUser} 
-                    posts={posts} 
-                    setPosts={setPosts} 
-                    setAuthStatus={setCurrentRoute} 
-                    currentRoute={currentRoute} // Pass the specific sub-route (feed, stats, createPost)
-                    setRoute={setCurrentRoute}
-                />
-            );
-            break;
-        default:
-             // Default redirect to login if state is bad
-             renderedPage = (
-                <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
-                    <div className="max-w-md text-center bg-white p-8 rounded-xl shadow-lg">
-                        <h1 className="text-3xl font-bold text-gray-800 mb-4">Page Not Found</h1>
-                        <p className="text-gray-600 mb-6">Redirecting to login...</p>
-                        <PrimaryButton onClick={() => setCurrentRoute('login')}>Go to Login</PrimaryButton>
+    // Post message to the public feed
+    handleNewPost({ 
+        to: recipient, 
+        message: currentMessage.trim() 
+    }); 
+
+    setCurrentMessage('');
+    setRecipient('All'); // Reset recipient to 'All' after public post
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar user={user} onLogout={() => setCurrentPage('login')} currentPage="messages" setCurrentPage={setCurrentPage} />
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+        <DashboardHeader
+          title="Public Recognition & Congratulations"
+          subtitle="Post a public message to recognize a colleague's efforts."
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Post/Compose Area */}
+          <div className="lg:col-span-2 space-y-6">
+            <DashboardCard className="h-full flex flex-col">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">
+                Post to Public Feed
+              </h3>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recipient:</label>
+                <div className="flex items-center space-x-4">
+                    <button
+                        onClick={() => setRecipient('All')}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                            recipient === 'All' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        Public Post (To All)
+                    </button>
+                    <div className="text-sm text-gray-600">
+                        Current Target: <span className="font-bold text-indigo-700">{recipient}</span>
                     </div>
                 </div>
-            );
-            break;
-    }
+              </div>
 
-    return (
-        <div className="min-h-screen">
-            {renderedPage}
-            {authMessage.message && (
-                <MessageBox msg={authMessage.message} type={authMessage.type} onClose={() => setAuthMessage({ message: null, type: null })} />
-            )}
+              {/* Message Input */}
+              <div className="relative">
+                <textarea
+                  ref={inputRef}
+                  value={currentMessage}
+                  onChange={handleMessageChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={`Write your congratulation or message here... (Type @ to mention an employee)`}
+                  className="w-full p-3 pr-24 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500"
+                  rows="5"
+                ></textarea>
+
+                {/* Employee List Popup */}
+                {showEmployeeList && (
+                  <div className="absolute bottom-full left-0 mb-2 w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    <p className="p-2 text-sm font-semibold text-gray-500 border-b">Select Employee</p>
+                    {allEmployees
+                      .filter(name => name.toLowerCase().includes(currentMessage.toLowerCase().split('@').pop().trim()))
+                      .filter(name => name !== user.name)
+                      .map((name) => (
+                        <div
+                          key={name}
+                          onClick={() => handleSelectEmployee(name)}
+                          className="p-2 hover:bg-indigo-50 cursor-pointer text-sm flex items-center"
+                        >
+                            <img src={getEmployeeAvatar(name)} alt={name} className="h-6 w-6 rounded-full mr-2"/>
+                          {name}
+                        </div>
+                      ))}
+                      <div
+                          onClick={() => handleSelectEmployee('All')}
+                          className="p-2 hover:bg-indigo-50 cursor-pointer text-sm font-bold text-indigo-600 border-t"
+                        >
+                          All (Public Post)
+                        </div>
+                  </div>
+                )}
+
+                {/* Send Button */}
+                <div className="absolute right-2 bottom-2 flex space-x-2">
+                  <button
+                    onClick={handleSend}
+                    className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition"
+                    title="Send Public Post"
+                    disabled={!currentMessage.trim()}
+                  >
+                    <SendIcon />
+                  </button>
+                </div>
+              </div>
+            </DashboardCard>
+          </div>
+
+          {/* Recently Posted Column */}
+          <div className="lg:col-span-1 space-y-4">
+            <DashboardCard className="h-full">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recently Posted</h3>
+              <ul className="space-y-4">
+                {recentlyPosted.map(post => (
+                  <li key={post.id} className="p-3 bg-gray-50 rounded-lg shadow-sm">
+                    <div className="flex items-start">
+                        <img src={post.avatar} alt={post.from} className="h-8 w-8 rounded-full object-cover mr-3"/>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-800 leading-tight">
+                                {post.from} to {post.to}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                {post.message}
+                            </p>
+                            <small className="text-xs text-indigo-500">{timeSince(post.timestamp)}</small>
+                        </div>
+                    </div>
+                  </li>
+                ))}
+                {recentlyPosted.length === 0 && <li>No recent public posts.</li>}
+              </ul>
+            </DashboardCard>
+          </div>
         </div>
-    );
+      </main>
+    </div>
+  );
+}
+
+// --- PROFILE PAGE (Unchanged Logic) ---
+function ProfilePage({ user, setCurrentPage, apiUrl, setApiUrl }) {
+  const [newApiUrl, setNewApiUrl] = useState(apiUrl);
+
+  const handleSaveApiUrl = () => {
+    setApiUrl(newApiUrl);
+    alert('API URL Updated!');
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar user={user} onLogout={() => setCurrentPage('login')} currentPage="profile" setCurrentPage={setCurrentPage} />
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+        <DashboardHeader
+          title="My Profile"
+          subtitle="Manage your personal information and application settings."
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* User Info Card */}
+          <DashboardCard className="lg:col-span-1 text-center">
+            <img
+              src={user.avatar}
+              alt="User Avatar"
+              className="h-24 w-24 rounded-full object-cover mx-auto mb-4 border-4 border-indigo-500 shadow-lg"
+            />
+            <h3 className="text-2xl font-bold text-gray-800">{user.name}</h3>
+            <p className="text-indigo-600 font-medium mb-4">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</p>
+
+            <div className="text-left space-y-2 mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 flex items-center">
+                <UserIcon className="h-4 w-4 mr-2 text-indigo-500" />
+                <span className="font-semibold">Department:</span> {user.department}
+              </p>
+              <p className="text-sm text-gray-600 flex items-center">
+                <TrophyIcon className="h-4 w-4 mr-2 text-yellow-500" />
+                <span className="font-semibold">Total Score:</span> {user.score} pts
+              </p>
+            </div>
+          </DashboardCard>
+
+          {/* API Configuration & Achievements */}
+          <div className="lg:col-span-2 space-y-8">
+            <DashboardCard>
+              <div className="flex items-center mb-4 border-b pb-3">
+                <SettingsIcon />
+                <h3 className="text-xl font-bold text-gray-800 ml-2">Backend API URL Configuration</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                This is for mock API usage. In a production environment, this would be locked down.
+              </p>
+              <div className="flex space-x-4">
+                <input
+                  type="url"
+                  value={newApiUrl}
+                  onChange={(e) => setNewApiUrl(e.target.value)}
+                  placeholder="Enter API URL"
+                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={handleSaveApiUrl}
+                  className="bg-green-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-green-700 transition"
+                >
+                  Save URL
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Current API URL: {apiUrl}</p>
+            </DashboardCard>
+
+            <DashboardCard>
+                <div className="flex items-center mb-4 border-b pb-3">
+                    <TrophyIcon />
+                    <h3 className="text-xl font-bold text-gray-800 ml-2">My Achievements</h3>
+                </div>
+                <ul className="space-y-2">
+                    {user.achievements.length > 0 ? (
+                        user.achievements.map(ach => (
+                            <li key={ach.id} className="p-3 bg-indigo-50 rounded-lg flex items-center">
+                                <span className="text-yellow-500 text-2xl mr-3">🏅</span>
+                                <p className="font-medium text-gray-700">{ach.text}</p>
+                            </li>
+                        ))
+                    ) : (
+                        <p className="text-center text-gray-500 pt-5">No personal achievements recorded yet.</p>
+                    )}
+                </ul>
+            </DashboardCard>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }
