@@ -128,3 +128,65 @@ Solved using absolute positioning and z-index in Tailwind CSS.
 🎯 Outcome
 
 Shout-outs can now be created, tagged, and displayed dynamically. The Dashboard became interactive and user-friendly, meeting all Week 3 goals successfully. 🚀
+
+🌈 Week 4 — Shout-out Feed, Filters, Image Uploads & Dashboard Enhancements
+✅ What I Did
+
+Implemented the Shout-out Feed page to display all shout-outs.
+
+Added filter options to sort shout-outs by:
+
+Department
+
+Sender
+
+Date
+
+Enhanced Dashboard Statistics:
+
+Shows My Shoutouts, Team Members, Posts Today.
+
+Fixed team member count to exclude the logged-in user.
+
+Added image and file upload support in Post Shoutout form:
+
+Users can now attach photos or images along with their messages.
+
+Implemented backend file handling with UploadFile in FastAPI.
+
+Stored uploaded file URLs and displayed them dynamically on the feed.
+
+Added emoji support (🎉 👏 ❤️) in shoutouts for expressive posts — no backend setup required, handled natively on frontend.
+
+Cleaned up backend logs — removed all debug prints and sensitive token details from terminal output.
+
+Improved UI styling for better spacing, responsive layout, and smooth animations.
+
+⚠️ Errors / Issues Faced
+
+Incorrect Team Member Count —
+✅ Fixed logic to exclude current user from HR department count.
+
+Filter Not Updating Feed —
+✅ Updated React state to trigger API re-fetch on filter change.
+
+File Upload Handling Issue —
+✅ Corrected file field type and configured static file serving.
+
+Emoji Encoding —
+✅ Verified UTF-8 support; used direct emoji characters.
+
+Verbose Logs Showing Tokens —
+✅ Removed debug prints after testing completion.
+
+🎯 Outcome
+
+The Week 4 update made BragBoard feature-rich and production-ready 🎊
+
+Users can post shout-outs with text, emojis, and images.
+
+Feed supports dynamic filtering and real-time updates.
+
+Dashboard statistics are accurate and insightful.
+
+The overall platform now feels like a professional recognition and celebration board — vibrant, social, and rewarding! 💫
