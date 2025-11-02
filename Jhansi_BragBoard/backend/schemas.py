@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 
 
@@ -64,6 +64,10 @@ class ShoutoutResponse(ShoutoutBase):
     created_at: Optional[datetime] = None
     recipient_names: List[str] = Field(default_factory=list)
 
+    # New fields for reactions
+    reactions: Dict[str, int] = Field(default_factory=dict)  # e.g., {"like": 3, "clap": 1}
+    user_reactions: List[str] = Field(default_factory=list)  # e.g., ["like"]
+
     class Config:
         orm_mode = True
 
@@ -71,6 +75,11 @@ class ShoutoutResponse(ShoutoutBase):
 # ===============================
 # COMMENT SCHEMAS
 # ===============================
+# in schemas.py
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    department: Optional[str] = None
+    password: Optional[str] = None
 
 # ===============================
 # COMMENT SCHEMAS
@@ -89,6 +98,19 @@ class CommentResponse(CommentBase):
     shoutout_id: int
     user_id: int
     user_name: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ===============================
+# REACTION SCHEMA
+# ===============================
+class ReactionResponse(BaseModel):
+    id: int
+    type: str
+    user_id: int
     created_at: datetime
 
     class Config:
