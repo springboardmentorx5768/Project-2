@@ -15,9 +15,11 @@ class User(Base):
     role = Column(String, default="employee", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     shoutouts_sent = relationship("ShoutOut", back_populates="sender", cascade="all, delete-orphan")
     received_shoutouts = relationship("ShoutOutRecipient", back_populates="recipient")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
+    reactions = relationship("Reaction", back_populates="user", cascade="all, delete-orphan")
 
 
 class ShoutOut(Base):
@@ -29,9 +31,11 @@ class ShoutOut(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     image_url = Column(String, nullable=True)  # ✅ Added field for image
 
+    # Relationships
     sender = relationship("User", back_populates="shoutouts_sent")
     recipients = relationship("ShoutOutRecipient", back_populates="shoutout", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="shoutout", cascade="all, delete-orphan")
+    reactions = relationship("Reaction", back_populates="shoutout", cascade="all, delete-orphan")
 
 
 class ShoutOutRecipient(Base):
@@ -41,6 +45,7 @@ class ShoutOutRecipient(Base):
     shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
     recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
+    # Relationships
     shoutout = relationship("ShoutOut", back_populates="recipients")
     recipient = relationship("User", back_populates="received_shoutouts")
 
@@ -54,5 +59,20 @@ class Comment(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     shoutout_id = Column(Integer, ForeignKey("shoutouts.id"))
 
+    # Relationships
     user = relationship("User", back_populates="comments")
     shoutout = relationship("ShoutOut", back_populates="comments")
+
+
+class Reaction(Base):
+    __tablename__ = "reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String, nullable=False)  # e.g., "like", "clap", "star"
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="reactions")
+    shoutout = relationship("ShoutOut", back_populates="reactions")
