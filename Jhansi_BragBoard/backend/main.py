@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,13 +15,14 @@ from pathlib import Path
 import json
 import shutil  # fallback for file writing
 from schemas import CommentCreate, CommentResponse
-
+from schemas import UpdateProfileRequest
+from schemas import ReactionResponse  # kept import (safe)
 import aiofiles
 
 import models, schemas, auth
 from database import engine, Base, get_db
 from auth import decode_token
-from models import User, ShoutOut, ShoutOutRecipient, Comment
+from models import User, ShoutOut, ShoutOutRecipient, Comment, Reaction
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -214,6 +216,8 @@ async def post_shoutout(
         created_at=new_shoutout.created_at,
         recipient_names=recipient_names,
         image_url=image_url,
+        reactions={},  # empty initially
+        user_reactions=[],
     )
 
 
@@ -239,6 +243,15 @@ def get_shoutouts(db: Session = Depends(get_db), current_user: User = Depends(ge
         )
         recipient_names = [r.name for r in recipients]
 
+        # reactions for this shoutout
+        reactions_objs = db.query(Reaction).filter(Reaction.shoutout_id == s.id).all()
+        reactions_counts = {}
+        user_reacts = []
+        for r in reactions_objs:
+            reactions_counts[r.type] = reactions_counts.get(r.type, 0) + 1
+            if r.user_id == current_user.id:
+                user_reacts.append(r.type)
+
         response.append(
             schemas.ShoutoutResponse(
                 id=s.id,
@@ -250,6 +263,8 @@ def get_shoutouts(db: Session = Depends(get_db), current_user: User = Depends(ge
                 created_at=s.created_at,
                 recipient_names=recipient_names,
                 image_url=s.image_url,
+                reactions=reactions_counts,
+                user_reactions=user_reacts,
             )
         )
     return response
@@ -325,13 +340,128 @@ def dashboard_stats(db: Session = Depends(get_db), current_user: User = Depends(
 }
 
 
+# ---------------- Reaction endpoint (toggle) (kept for backward compatibility) ----------------
+@app.post("/react/{shoutout_id}")
+def react_to_shoutout(shoutout_id: int, payload: dict = Body(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Toggle a reaction for the current user on a shoutout.
+    Body: {"reaction": "like"}  # allowed values: "like", "clap", "star" (frontend decides)
+    Response: latest reaction counts + user's reactions for this shoutout
+    """
+    reaction_type = (payload.get("reaction") or "").strip()
+    if not reaction_type:
+        raise HTTPException(status_code=400, detail="Reaction type required")
+
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="ShoutOut not found")
+
+    # Check if user already has this reaction on this shoutout
+    existing = (
+        db.query(Reaction)
+        .filter(Reaction.shoutout_id == shoutout_id, Reaction.user_id == current_user.id, Reaction.type == reaction_type)
+        .first()
+    )
+
+    if existing:
+        # toggle off -> delete
+        db.delete(existing)
+        db.commit()
+    else:
+        # add reaction
+        new_react = Reaction(type=reaction_type, user_id=current_user.id, shoutout_id=shoutout_id)
+        db.add(new_react)
+        db.commit()
+
+    # return latest counts and user's reactions
+    reactions_objs = db.query(Reaction).filter(Reaction.shoutout_id == shoutout_id).all()
+    reactions_counts = {}
+    user_reacts = []
+    for r in reactions_objs:
+        reactions_counts[r.type] = reactions_counts.get(r.type, 0) + 1
+        if r.user_id == current_user.id:
+            user_reacts.append(r.type)
+
+    # return shape frontend expects
+    return {"counts": reactions_counts, "user_reacted": user_reacts}
+
+
+# ---------------- New: GET reactions for a shoutout (matches frontend getReactionsFor) ----------------
+@app.get("/reactions/{shoutout_id}")
+def get_reactions(shoutout_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Returns a summary for the shoutout:
+      { counts: { like: n, ... }, user_reacted: ["like", ...] }
+    This matches the frontend helper getReactionsFor(shoutoutId).
+    """
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="ShoutOut not found")
+
+    reactions_objs = db.query(Reaction).filter(Reaction.shoutout_id == shoutout_id).order_by(Reaction.created_at.asc()).all()
+
+    reactions_counts = {}
+    user_reacted = []
+    for r in reactions_objs:
+        reactions_counts[r.type] = reactions_counts.get(r.type, 0) + 1
+        if r.user_id == current_user.id:
+            user_reacted.append(r.type)
+
+    return {"counts": reactions_counts, "user_reacted": user_reacted}
+
+
+# ---------------- New: Toggle reaction (matches frontend toggleReaction) ----------------
+@app.post("/reactions/toggle")
+def toggle_reaction(payload: dict = Body(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Frontend expects:
+      POST /reactions/toggle
+      body: { shoutout_id: <int>, type: "<like|clap|star>" }
+    This endpoint toggles the specified reaction for the current user.
+    Returns latest counts and user's reactions for the shoutout.
+    """
+    shoutout_id = payload.get("shoutout_id")
+    reaction_type = (payload.get("type") or "").strip()
+    if not shoutout_id or not reaction_type:
+        raise HTTPException(status_code=400, detail="shoutout_id and type are required")
+
+    # ensure shoutout exists
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="ShoutOut not found")
+
+    # normalize reaction_type (do not alter semantics used elsewhere)
+    reaction_type = reaction_type
+
+    # find existing reaction of this type by this user on this shoutout
+    existing = (
+        db.query(Reaction)
+        .filter(Reaction.shoutout_id == shoutout_id, Reaction.user_id == current_user.id, Reaction.type == reaction_type)
+        .first()
+    )
+
+    if existing:
+        db.delete(existing)
+        db.commit()
+    else:
+        new_react = Reaction(type=reaction_type, user_id=current_user.id, shoutout_id=shoutout_id)
+        db.add(new_react)
+        db.commit()
+
+    # build counts and user_reactions
+    reactions_objs = db.query(Reaction).filter(Reaction.shoutout_id == shoutout_id).all()
+    reactions_counts = {}
+    user_reacts = []
+    for r in reactions_objs:
+        reactions_counts[r.type] = reactions_counts.get(r.type, 0) + 1
+        if r.user_id == current_user.id:
+            user_reacts.append(r.type)
+
+    # return shape frontend expects
+    return {"counts": reactions_counts, "user_reacted": user_reacts}
+
 
 # ---------------- Update profile ----------------
-def UpdateProfileRequest(BaseModel):
-    name: Optional[str] = None
-    department: Optional[str] = None
-    password: Optional[str] = None
-
 
 @app.put("/update-profile", response_model=schemas.UserResponse)
 def update_profile(
