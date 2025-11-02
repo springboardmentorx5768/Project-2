@@ -9,6 +9,8 @@ export default function ShoutoutFeed() {
   const [error, setError] = useState("");
   const [comments, setComments] = useState({});
   const [newComment, setNewComment] = useState({});
+  const [reactionCounts, setReactionCounts] = useState({});
+  const [userReactions, setUserReactions] = useState({});
 
   const [senderFilter, setSenderFilter] = useState("");
   const [recipientFilter, setRecipientFilter] = useState("");
@@ -18,6 +20,53 @@ export default function ShoutoutFeed() {
 
   const token = localStorage.getItem("access_token");
   const headers = { Authorization: `Bearer ${token}` };
+
+  const fetchReactions = async (id) => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:8000/reactions/${id}`, { headers });
+      setReactionCounts((prev) => ({ ...prev, [id]: res.data.counts }));
+      setUserReactions((prev) => ({ ...prev, [id]: res.data.user_reacted }));
+    } catch (err) {
+      console.error("Error fetching reactions:", err);
+    }
+  };
+
+  const toggleReaction = async (id, type) => {
+  const userReacted = userReactions[id] || [];
+  const counts = { ...reactionCounts[id] };
+
+  const alreadyReacted = userReacted.includes(type);
+
+  // optimistic update
+  if (alreadyReacted) {
+    counts[type] = (counts[type] || 1) - 1;
+    setUserReactions((prev) => ({
+      ...prev,
+      [id]: prev[id].filter((r) => r !== type),
+    }));
+  } else {
+    counts[type] = (counts[type] || 0) + 1;
+    setUserReactions((prev) => ({
+      ...prev,
+      [id]: [...(prev[id] || []), type],
+    }));
+  }
+  setReactionCounts((prev) => ({ ...prev, [id]: counts }));
+
+  // send to backend
+  try {
+    await axios.post(
+      "http://127.0.0.1:8000/reactions/toggle",
+      { shoutout_id: id, type },
+      { headers }
+    );
+  } catch (err) {
+    console.error("Error toggling reaction:", err);
+    // rollback if failed
+    fetchReactions(id);
+  }
+};
+
 
   const fetchShoutouts = async () => {
     try {
@@ -32,6 +81,7 @@ export default function ShoutoutFeed() {
       for (const s of data) {
         const cRes = await axios.get(`http://127.0.0.1:8000/comments/${s.id}`, { headers });
         allComments[s.id] = cRes.data;
+        await fetchReactions(s.id);
       }
       setComments(allComments);
     } catch (err) {
@@ -62,7 +112,8 @@ export default function ShoutoutFeed() {
             .includes(recipientFilter.toLowerCase())
         : true;
       const dateMatch = dateFilter
-        ? new Date(s.created_at).toLocaleDateString() === new Date(dateFilter).toLocaleDateString()
+        ? new Date(s.created_at).toLocaleDateString() ===
+          new Date(dateFilter).toLocaleDateString()
         : true;
       return senderMatch && recipientMatch && dateMatch;
     });
@@ -183,7 +234,25 @@ export default function ShoutoutFeed() {
                     {s.created_at ? new Date(s.created_at).toLocaleString() : ""}
                   </p>
 
-                  {/* 💬 Comments Section */}
+                  {/* 🧡 Reactions */}
+                  <div className="flex justify-around mt-4">
+                    {["like", "clap", "star"].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => toggleReaction(s.id, type)}
+                        className={`px-3 py-1 rounded-xl text-sm transition ${
+                          userReactions[s.id]?.includes(type)
+                            ? "bg-blue-600"
+                            : "bg-gray-700 hover:bg-gray-600"
+                        }`}
+                      >
+                        {type === "like" ? "👍" : type === "clap" ? "👏" : "⭐"}{" "}
+                        {reactionCounts[s.id]?.[type] || 0}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 💬 Comments */}
                   <div className="mt-4 bg-gray-700 p-3 rounded-xl">
                     <h4 className="text-sm font-semibold text-blue-300 mb-2">💬 Comments</h4>
                     <div className="space-y-1 max-h-32 overflow-y-auto">
