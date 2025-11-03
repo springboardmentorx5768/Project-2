@@ -1,0 +1,240 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: linear-gradient(180deg, #ffffff 0%, #fefefe 100%);
+  border-right: none;
+  padding: 2rem 1rem 1.5rem 1.5rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  width: 280px;
+  z-index: 50;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.02);
+}
+
+/* Removed sidebar after element to prevent visual overlap */
+
+.sidebar-header {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #7c3aed, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2rem;
+  padding: 0;
+  text-align: center;
+  position: relative;
+}
+
+.sidebar-header::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, #7c3aed, #06b6d4);
+  border-radius: 2px;
+}
+
+/* Navigation link container */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+  margin-top: 1rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 20px;
+  background: linear-gradient(135deg, #7c3aed, #06b6d4);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.2s ease;
+}
+
+.nav-link:hover {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(6, 182, 212, 0.08));
+  color: #1e293b;
+  border-color: rgba(124, 58, 237, 0.2);
+  transform: translateX(4px);
+}
+
+.nav-link:hover::before {
+  width: 3px;
+}
+
+/* Style for the currently active link */
+.nav-link.active {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(6, 182, 212, 0.1));
+  color: #7c3aed;
+  font-weight: 600;
+  border-color: rgba(124, 58, 237, 0.3);
+  transform: translateX(4px);
+}
+
+.nav-link.active::before {
+  width: 3px;
+}
+
+.nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.75rem;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.nav-link:hover .nav-icon,
+.nav-link.active .nav-icon {
+  opacity: 1;
+}
+
+/* Prominent button for creating a shout-out */
+.create-shoutout-btn {
+  width: 100%;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.create-shoutout-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.create-shoutout-btn:hover {
+  background: linear-gradient(135deg, #6d28d9, #5b21b6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.create-shoutout-btn:hover::before {
+  left: 100%;
+}
+
+.create-shoutout-btn:active {
+  transform: translateY(0);
+}
+
+/* Ensure button elements that use the same class get the same visual treatment */
+button.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  position: relative;
+}
+
+button.nav-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 20px;
+  background: linear-gradient(135deg, #7c3aed, #06b6d4);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.2s ease;
+}
+
+button.nav-link:hover {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(6, 182, 212, 0.08));
+  color: #1e293b;
+  border-color: rgba(124, 58, 237, 0.2);
+  transform: translateX(4px);
+}
+
+button.nav-link:hover::before {
+  width: 3px;
+}
+
+button.nav-link:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+/* Special styling for logout button */
+button.nav-link:last-child {
+  margin-top: 0.125rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.5rem;
+  color: #ef4444;
+}
+
+button.nav-link:last-child:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+button.nav-link:last-child::before {
+  background: #ef4444;
+}
+
+/* Bottom section spacing - positions profile/settings/logout close to leaderboard */
+.nav-link.bottom-section {
+  margin-top: 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.nav-link.bottom-section::after {
+  content: '';
+  position: absolute;
+  top: -0.125rem;
+  left: 1rem;
+  right: 1rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+}

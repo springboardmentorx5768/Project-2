@@ -1,0 +1,28 @@
+# Python virtual environments
+**/venv/
+**/env/
+**/.venv/
+
+# Python cache files
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+
+# Node modules
+**/node_modules/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Uploads directory (if contains user uploads)
+uploads/
