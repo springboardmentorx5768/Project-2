@@ -1,4 +1,4 @@
-import DashboardContent from "./DashboardContent";
+import DashboardContent from "../dashboard/DashboardContent";
 import ShoutOutFeed from "../shoutout/ShoutOutFeed";
 import ShoutOutForm from "../shoutout/ShoutOutForm";
 import MyShoutOuts from "../shoutout/MyShoutOuts";

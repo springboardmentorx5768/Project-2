@@ -111,23 +111,30 @@ class ApiService {
   }
 
   // -------------------- REACTIONS --------------------
-  async addReaction(shoutout_id, type) {
+  async addReaction(shoutout_id, reaction_type) {
     const res = await axios.post(
-      `${API_BASE_URL}/shoutouts/${shoutout_id}/reactions`,
-      { type },
-      { headers: this.getHeaders() }
+      `${API_BASE_URL}/reactions/${shoutout_id}`,
+       { reaction_type },
+       { headers: this.getHeaders() }
     );
     return res.data;
   }
 
-  async removeReaction(shoutout_id, type) {
-    const res = await axios.delete(`${API_BASE_URL}/shoutouts/${shoutout_id}/reactions`, {
-      headers: this.getHeaders(),
-      data: { type },
+  async getReactionCounts(shoutout_id) {
+    const res = await axios.get(`${API_BASE_URL}/reactions/${shoutout_id}`, {
+      headers: this.getHeaders()
     });
     return res.data;
   }
-
+  
+  async getReactedUsers(shoutout_id) {
+    const res = await axios.get(
+      `${API_BASE_URL}/reactions/${shoutout_id}/users`,
+      { headers: this.getHeaders() }
+    );
+    return res.data;
+  }
+  
   // -------------------- COMMENTS --------------------
   async addComment(shoutout_id, { user_id, text }) {
     const res = await axios.post(

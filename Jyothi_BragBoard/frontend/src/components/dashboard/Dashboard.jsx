@@ -4,7 +4,7 @@ import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
 
 const Dashboard = ({ user, onLogout }) => {
-  const [activeView, setActiveView] = useState("dashboard");
+  const [activeView, setActiveView] = useState("feed");
   const [shoutouts, setShoutouts] = useState([]);
   const [shoutoutUpdated, setShoutoutUpdated] = useState(false);
   const [currentUser, setCurrentUser] = useState(user); // 👈 local state for updates

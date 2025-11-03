@@ -69,6 +69,36 @@ class UserUpdate(BaseModel):
     department: Optional[str]
     role: Optional[str]
 
+# ===== Reaction Schemas =====
+class ReactionBase(BaseModel):
+    reaction_type: str   # like, love, clap, celebrate, etc.
+
+
+class ReactionResponse(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    reaction_type: str
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class AddReactionRequest(BaseModel):
+    reaction_type: str
+
+class ReactionCountResponse(BaseModel):
+    like: int = 0
+    love: int = 0
+    clap: int = 0
+    celebrate: int = 0
+    insightful: int = 0
+    support: int = 0
+    star: int = 0
+    my_reaction: Optional[str] = None
+
 # ===== ShoutOut Schemas =====
 class ShoutOutCreate(BaseModel):
     title: str
@@ -98,6 +128,7 @@ class ShoutOutResponse(BaseModel):
     created_at: datetime
     edited_at: Optional[datetime] = None
     image_url: Optional[str] = None
+    reactions: List[ReactionResponse] = []
 
     model_config = {
         "from_attributes": True
@@ -120,3 +151,4 @@ class DepartmentStats(BaseModel):
     model_config = {
         "from_attributes": True
     }
+

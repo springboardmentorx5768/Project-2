@@ -16,14 +16,16 @@ const Sidebar = ({ activeView, setActiveView, userRole }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   const commonItems = [
-    { id: "dashboard", name: "Dashboard", icon: <Home size={20} /> },
     { id: "feed", name: "Shout-Out Feed", icon: <MessageSquare size={20} /> },
     { id: "create", name: "Create Shout-Out", icon: <Send size={20} /> },
     { id: "my-shoutouts", name: "My Shout-Outs", icon: <UserCircle size={20} /> },
     { id: "achievements", name: "Achievements", icon: <Award size={20} /> },
     { id: "leaderboard", name: "Leaderboard", icon: <Trophy size={20} /> },
-    { id: "settings", name: "Settings", icon: <Settings size={20} /> },
+    { id: "dashboard", name: "Insights Dashboard", icon: <Home size={20} /> },
+
   ];
+
+  const settingsItem = { id: "settings", name: "Settings", icon: <Settings size={20} /> };
 
   const adminItems = [
     { id: "admin-dashboard", name: "Admin Dashboard", icon: <BarChart3 size={20} /> },
@@ -31,7 +33,7 @@ const Sidebar = ({ activeView, setActiveView, userRole }) => {
     { id: "reports", name: "Reports", icon: <FileWarning size={20} /> },
   ];
 
-  const menuItems = userRole === "admin" ? [...commonItems, ...adminItems] : commonItems;
+  const menuItems = userRole === "admin" ? [...commonItems, ...adminItems, settingsItem] : [...commonItems, settingsItem];
 
   return (
     <div

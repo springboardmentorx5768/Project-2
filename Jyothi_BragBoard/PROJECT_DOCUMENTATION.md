@@ -31,64 +31,62 @@ BragBoard is a full-stack web application that connects employees within a compa
 ```
 Jyothi_BragBoard/
 │
-├── backend/                                  
-│   ├── main.py                              
-│   ├── config.py                             
-│   ├── database.py                          
-│   ├── database_models.py                 
-│   ├── schemas.py                         
-│   ├── auth.py                               
-│   ├── check_db.py                        
-│   │
-│   ├── routers/                              
-│   │   ├── users.py                       
-│   │   └── shoutouts.py                      
-│   │
-│   ├── uploads/                             
-│   │   └── (image files saved here)
-│   │
-│   ├── requirements.txt                    
-│   └── .env                                  
+├── backend/
+│ ├── main.py
+│ ├── config.py
+│ ├── database.py
+│ ├── database_models.py
+│ ├── schemas.py
+│ ├── auth.py
+│ ├── check_db.py
+│ │
+│ ├── routers/
+│ │ ├── users.py
+│ │ ├── shoutouts.py
+│ │ └── reactions.py ← NEW
+│ │
+│ ├── uploads/
+│ │ └── (image files saved here)
+│ │
+│ ├── requirements.txt
+│ └── .env
 │
-│
-├── frontend/                               
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── auth/                         
-│   │   │   │   ├── Auth.jsx
-│   │   │   │   ├── Login.jsx
-│   │   │   │   └── Register.jsx
-│   │   │   │
-│   │   │   ├── dashboard/                    
-│   │   │   │   ├── Dashboard.jsx
-│   │   │   │   ├── Header.jsx
-│   │   │   │   ├── Sidebar.jsx
-│   │   │   │   ├── Settings.jsx
-│   │   │   │   ├── MainContent.jsx
-│   │   │   │   └── DashboardContent.jsx
-│   │   │   │
-│   │   │   ├── shoutouts/                   
-│   │   │   │   ├── ShoutOutFeed.jsx
-│   │   │   │   ├── ShoutOutForm.jsx
-│   │   │   │   ├── ShoutOutPage.jsx
-│   │   │   │   ├── MyShoutOuts.jsx
-│   │   │   │   └── EditShoutOut.jsx
-│   │   │
-│   │   ├── services/
-│   │   │   └── api.js                        
-│   │   │
-│   │   ├── App.jsx                        
-│   │   └── index.css                        
-│   │
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
+├── frontend/
+│ ├── src/
+│ │ ├── components/
+│ │ │ ├── auth/
+│ │ │ │ ├── Auth.jsx
+│ │ │ │ ├── Login.jsx
+│ │ │ │ └── Register.jsx
+│ │ │ │
+│ │ │ ├── dashboard/
+│ │ │ │ ├── Dashboard.jsx
+│ │ │ │ ├── Header.jsx
+│ │ │ │ ├── Sidebar.jsx
+│ │ │ │ ├── Settings.jsx
+│ │ │ │ ├── MainContent.jsx
+│ │ │ │ └── DashboardContent.jsx
+│ │ │ │
+│ │ │ ├── shoutouts/
+│ │ │ │ ├── ShoutOutFeed.jsx
+│ │ │ │ ├── ShoutOutForm.jsx
+│ │ │ │ ├── ShoutOutPage.jsx
+│ │ │ │ ├── MyShoutOuts.jsx
+│ │ │ │ ├── EditShoutOut.jsx
+│ │ │ │ └── ReactionBar.jsx ← NEW
+│ │ │
+│ │ ├── services/
+│ │ │ └── api.js
+│ │ │
+│ │ ├── App.jsx
+│ │ └── index.css
+│ │
+│ ├── package.json
+│ ├── vite.config.js
+│ └── tailwind.config.js
 │
 ├── .gitignore
-└── PROJECT_DOCUMENTATION.md                
-
-
+└── PROJECT_DOCUMENTATION.md
 ```
 
 **Week 1 – Project Setup & Authentication**<br><br>
@@ -188,3 +186,27 @@ POST /login → User authentication and JWT generation<br>
 -Edited posts show “Edited” timestamp properly<br>
 -Attachments/images are visible in the feed for better visual engagement<br><br>
 
+**Week 5 – Reaction Feature Implementation**<br><br>
+**Tasks Completed**<br>
+-Added reactions to shout-outs (Like 👍, Clap 👏, Star ⭐)<br>
+-Implemented reaction counters for each post<br>
+-Enabled user-specific reaction tracking (each user can react/unreact)
+<br>
+-Added popup to view list of users who reacted<br><br>
+
+**Implementation Details**<br><br>
+-Added reaction buttons in the shout-out feed UI<br>
+-Reactions are stored in the database linked to:<br>
+-shoutout_id<br>
+-user_id<br>
+-reaction_type(like/clap/star)<br>
+-Clicking a reaction toggles it (adds if not reacted, removes if already reacted)
+<br>
+-Reaction counts update instantly after each action<br>
+-Clicking on the reaction count opens a popup showing the list of users who reacted<br>
+-Popup closes on outside-click or re-click<br><br>
+
+**Output**<br><br>
+-Each shout-out now displays total reactions per type<br>
+-Users can interact and appreciate posts more meaningfully<br>
+-Reaction data is maintained per user, ensuring accurate counts<br>

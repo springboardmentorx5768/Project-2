@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { motion } from "framer-motion";
 import EditShoutOut from "./EditShoutOut";
+import ReactionBar from "./ReactionBar";
 import ApiService from "../../services/api";
 
 dayjs.extend(utc);
@@ -83,7 +84,6 @@ export default function MyShoutOuts({ currentUser }) {
 
       // Remove deleted shoutout from the list
       setShoutouts(prev => prev.filter(s => s.id !== shoutId));
-      toast.success("Shoutout deleted successfully!"); 
 
     } catch (err) {
       console.error("Delete shoutout failed:", err);
@@ -101,8 +101,10 @@ export default function MyShoutOuts({ currentUser }) {
 
       {/* Filters */}
       <motion.div
-        className="bg-white p-5 rounded-3xl shadow-lg flex flex-wrap items-center gap-4 sticky top-4 z-10"
-        initial={{ opacity: 0, y: -10 }}
+className="
+bg-white/70 backdrop-blur-md border border-gray-200
+rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-4
+"        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <div className="flex items-center space-x-2 min-w-[200px]">
@@ -193,7 +195,11 @@ export default function MyShoutOuts({ currentUser }) {
       {shoutouts.map((shout) => (
         <motion.div
           key={shout.id}
-          className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-2xl shadow hover:shadow-xl transition-all duration-200 relative"
+          className=" 
+          relative overflow-visible z-20
+          bg-white/80 backdrop-blur-lg border border-gray-200
+          rounded-3xl p-6 shadow-sm hover:shadow-md transition-all
+          "
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -224,46 +230,54 @@ export default function MyShoutOuts({ currentUser }) {
       )}
     </div>
 
-    {/* Show edit/delete only if logged-in user is the giver */}
-    {shout.giver_id === currentUser.id && (
-      <div className="relative mt-1">
+    {(shout.giver_id === currentUser.id || currentUser.role === "admin") && (
+  <div className="relative mt-1">
+    <button
+      onClick={() => setOpenMenuId(openMenuId === shout.id ? null : shout.id)}
+      className="text-gray-500 hover:text-gray-800 text-xl font-bold focus:outline-none"
+    >
+      ⋮
+    </button>
+
+    {openMenuId === shout.id && (
+      <div className="absolute right-0 mt-2 w-28 bg-white border rounded-xl shadow-lg flex flex-col z-20">
+
+        {shout.giver_id === currentUser.id && (
+          <button
+            onClick={() => {
+              setEditingShoutoutId(shout.id);
+              setOpenMenuId(null);
+            }}
+            className="px-4 py-2 text-left text-sm hover:bg-blue-100 rounded-t-xl flex items-center gap-2"
+          >
+            <Edit2 size={14} /> Edit
+          </button>
+        )}
+
+        {/*   Delete for giver OR admin */}
         <button
-          onClick={() => setOpenMenuId(openMenuId === shout.id ? null : shout.id)}
-          className="text-gray-500 hover:text-gray-800 text-xl font-bold focus:outline-none"
+          onClick={() => {
+            deleteShoutout(shout.id);
+            setOpenMenuId(null);
+          }}
+          className={`px-4 py-2 text-left text-sm hover:bg-red-100 flex items-center gap-2 ${
+            shout.giver_id !== currentUser.id ? "rounded-xl" : "rounded-b-xl"
+          }`}
         >
-          ⋮
+          <Trash2 size={14} /> Delete
         </button>
 
-        {openMenuId === shout.id && (
-          <div className="absolute right-0 mt-2 w-28 bg-white border rounded-xl shadow-lg flex flex-col z-20">
-            <button
-              onClick={() => {
-                setEditingShoutoutId(shout.id);
-                setOpenMenuId(null);
-              }}
-              className="px-4 py-2 text-left text-sm hover:bg-blue-100 rounded-t-xl flex items-center gap-2"
-            >
-              <Edit2 size={14} /> Edit
-            </button>
-            <button
-              onClick={() => {
-                deleteShoutout(shout.id);
-                setOpenMenuId(null);
-              }}
-              className="px-4 py-2 text-left text-sm hover:bg-red-100 rounded-b-xl flex items-center gap-2"
-            >
-              <Trash2 size={14} /> Delete
-            </button>
-          </div>
-          )}
-          </div>
-       )}
+      </div>
+    )}
+  </div>
+)}
+
       </div>
       </div> 
           {/* Receiver */}
           <div className="flex items-center mb-2">
-            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">
-             🎯 To: {shout.receiver_name} | {shout.receiver_department || "N/A"} | {shout.receiver_role || "N/A"}
+          <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full text-xs font-semibold">
+          🎯 To: {shout.receiver_name} | {shout.receiver_department || "N/A"} | {shout.receiver_role || "N/A"}
             </span>
           </div>
 
@@ -309,6 +323,11 @@ export default function MyShoutOuts({ currentUser }) {
               )}
             </>
           )}
+          {/* Reactions */}
+<div className="mt-4">
+<ReactionBar shoutout={shout} />
+</div>
+
         </motion.div>
       ))}
     </div>

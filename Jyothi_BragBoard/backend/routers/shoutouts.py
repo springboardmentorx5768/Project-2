@@ -1,12 +1,12 @@
 # shoutouts.py
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from typing import List, Optional
 from datetime import datetime, timedelta
 import shutil, uuid, os
 from database import get_db
-from database_models import ShoutOut, User, ShoutOutTag
+from database_models import ShoutOut, User, ShoutOutTag, ShoutOutReaction
 from auth import get_current_user
 from schemas import UserOut, ShoutOutCreate, ShoutOutResponse, ShoutOutUpdate, VisibilityEnum
 
@@ -35,23 +35,50 @@ def get_dashboard_stats(
 ):
     total_users = db.query(User).filter(User.department == current_user.department).count()
 
-    # Exclude deleted shoutouts
     shoutouts_sent = db.query(ShoutOut).filter(
         ShoutOut.giver_id == current_user.id,
-        ShoutOut.message != "This shoutout was deleted"
+        ShoutOut.is_deleted == False
     ).count()
 
     shoutouts_received = db.query(ShoutOut).filter(
         ShoutOut.receiver_id == current_user.id,
-        ShoutOut.message != "This shoutout was deleted"
+        ShoutOut.is_deleted == False
     ).count()
+
+    top_all_contributors = (
+        db.query(User.username, func.count(ShoutOut.id).label("count"), User.department)
+        .join(ShoutOut, ShoutOut.giver_id == User.id)
+        .filter(ShoutOut.is_deleted == False)
+        .group_by(User.id)
+        .order_by(func.count(ShoutOut.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    top_dept_contributors = (
+        db.query(User.username, func.count(ShoutOut.id).label("count"))
+        .join(ShoutOut, ShoutOut.giver_id == User.id)
+        .filter(
+            User.department == current_user.department,
+            ShoutOut.is_deleted == False
+        )
+        .group_by(User.id)
+        .order_by(func.count(ShoutOut.id).desc())
+        .limit(5)
+        .all()
+    )
 
     return {
         "totalUsers": total_users,
         "shoutoutsSent": shoutouts_sent,
-        "shoutoutsReceived": shoutouts_received
+        "shoutoutsReceived": shoutouts_received,
+        "topDeptContributors": [
+            {"username": u[0], "count": u[1]} for u in top_dept_contributors
+        ],
+        "topAllContributors": [
+            {"username": u[0], "count": u[1], "department": u[2]} for u in top_all_contributors
+        ]
     }
-
 
 
 # -------------------- CREATE SHOUTOUT --------------------
@@ -130,39 +157,68 @@ def update_shoutout(
     if existing.giver_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this shoutout")
 
-    # --- Update simple fields ---
+    # Track if any change occurs
+    is_changed = False
+
+    # --- Compare & update simple fields ---
     for field, value in shoutout_data.dict(exclude_unset=True).items():
         if field not in ["tagged_user_ids", "image_url"]:
-            setattr(existing, field, value)
+            if getattr(existing, field) != value:
+                setattr(existing, field, value)
+                is_changed = True
 
-    # --- Handle image ---
+    # --- Compare & update image ---
     if "image_url" in shoutout_data.dict(exclude_unset=True):
-        existing.image_url = shoutout_data.image_url if shoutout_data.image_url else None
+        new_image = shoutout_data.image_url if shoutout_data.image_url else None
+        if existing.image_url != new_image:
+            existing.image_url = new_image
+            is_changed = True
 
-    # --- Handle tagged users safely ---
     if "tagged_user_ids" in shoutout_data.dict(exclude_unset=True):
-        db.query(ShoutOutTag).filter(ShoutOutTag.shoutout_id == existing.id).delete()
-        db.commit() 
+        old_tagged = {t.tagged_user_id for t in existing.tags}
+        new_tagged = set(shoutout_data.tagged_user_ids or [])
 
-        for uid in shoutout_data.tagged_user_ids or []:
-            tagged_user = db.query(User).filter(User.id == uid).first()
-            if tagged_user:
+        if old_tagged != new_tagged:
+            db.query(ShoutOutTag).filter(ShoutOutTag.shoutout_id == existing.id).delete()
+            for uid in new_tagged:
                 db.add(ShoutOutTag(shoutout_id=existing.id, tagged_user_id=uid))
+            is_changed = True
 
-    # --- Update edited_at timestamp ---
+    if not is_changed:
+        receiver = db.query(User).filter(User.id == existing.receiver_id).first()
+        tagged_users = [UserOut.model_validate(t.tagged_user) for t in existing.tags]
+        image_url = f"http://127.0.0.1:8000{existing.image_url}" if existing.image_url else None
+
+        return ShoutOutResponse(
+            id=existing.id,
+            giver_id=existing.giver_id,
+            receiver_id=existing.receiver_id,
+            title=existing.title,
+            message=existing.message,
+            giver_name=current_user.username,
+            receiver_name=receiver.username,
+            giver_department=current_user.department,
+            giver_role=current_user.role,
+            receiver_department=receiver.department,
+            receiver_role=receiver.role,
+            tagged_users=tagged_users,
+            category=existing.category,
+            is_public=existing.is_public,
+            created_at=existing.created_at,
+            edited_at=existing.edited_at,
+            image_url=image_url
+        )
+
+
+    # Update edited timestamp only when something actually changed
     existing.edited_at = datetime.utcnow()
 
     db.commit()
     db.refresh(existing)
 
-    # --- Re-fetch receiver and tags ---
+    # Re-fetch related data
     receiver = db.query(User).filter(User.id == existing.receiver_id).first()
-    tagged_users = [
-        UserOut.model_validate(t.tagged_user)
-        for t in db.query(ShoutOutTag).filter(ShoutOutTag.shoutout_id == existing.id).all()
-        if t.tagged_user
-    ]
-
+    tagged_users = [UserOut.model_validate(t.tagged_user) for t in existing.tags]
     image_url = f"http://127.0.0.1:8000{existing.image_url}" if existing.image_url else None
 
     return ShoutOutResponse(
@@ -192,24 +248,22 @@ def delete_shoutout(
     current_user: User = Depends(get_current_user)
 ):
     shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+
     if not shoutout:
         raise HTTPException(status_code=404, detail="Shoutout not found")
 
-    if shoutout.giver_id != current_user.id:
+    # If not admin, ensure the user owns it
+    if current_user.role != "admin" and shoutout.giver_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this shoutout")
 
-    # Instead of deleting, mark it as deleted
-    shoutout.message = "This shoutout was deleted"
-    shoutout.image_url = None
+    # Soft delete (same for admin and user)
+    shoutout.is_deleted = True
     shoutout.edited_at = datetime.utcnow()
-    
-    for tag in shoutout.tags:
-        db.delete(tag)
 
     db.commit()
     db.refresh(shoutout)
 
-    return {"detail": "Shoutout marked as deleted", "id": shoutout.id}
+    return {"detail": "Shoutout successfully soft-deleted", "id": shoutout_id}
 
 # -------------------- FEED --------------------
 @router.get("/feed", response_model=List[ShoutOutResponse])
@@ -225,6 +279,7 @@ def get_shoutouts_feed(
     current_user: User = Depends(get_current_user)
 ):
     query = db.query(ShoutOut)
+    query = query.filter(ShoutOut.is_deleted == False)
 
     if department != "all":
         query = query.filter(
@@ -244,6 +299,25 @@ def get_shoutouts_feed(
 
     results = []
     for s in shoutouts:
+
+        reactions = (
+           db.query(ShoutOutReaction, User)
+           .join(User, ShoutOutReaction.user_id == User.id)
+           .filter(ShoutOutReaction.shoutout_id == s.id)
+           .all()
+        )
+
+        reactions_list = [
+            {
+               "id": reaction.id,
+               "user_id": reaction.user_id,
+               "reaction_type": reaction.reaction_type,
+               "created_at": reaction.created_at,
+               "username": user.username
+            }
+            for reaction, user in reactions
+        ]
+        # Visibility checks stay the same
         if (
             s.is_public == VisibilityEnum.public
             or s.giver_id == current_user.id
@@ -272,10 +346,11 @@ def get_shoutouts_feed(
                 is_public=s.is_public,
                 created_at=s.created_at,
                 edited_at=s.edited_at,
-                image_url=image_url
+                image_url=image_url,
+                reactions=reactions_list
             ))
-    return results
 
+    return results
 
 # -------------------- MY SHOUTOUTS --------------------
 @router.get("/my-shoutouts", response_model=dict)
@@ -291,7 +366,7 @@ def get_my_shoutouts(
             ShoutOut.giver_id == current_user.id,
             ShoutOut.receiver_id == current_user.id
         ),
-        ShoutOut.message != "This shoutout was deleted"
+        ShoutOut.is_deleted == False
     )
 
     # Apply department filter
@@ -309,8 +384,19 @@ def get_my_shoutouts(
     # Format results
     result = []
     for s in shoutouts:
+
+        reactions = db.query(ShoutOutReaction).filter(
+            ShoutOutReaction.shoutout_id == s.id
+        ).all()
+
+        reaction_counts = {}
+        for r in reactions:
+            reaction_counts[r.reaction_type] = reaction_counts.get(r.reaction_type, 0) + 1
+
+        my_reaction = next((r.reaction_type for r in reactions if r.user_id == current_user.id), None)
         tagged_users = [UserOut.model_validate(t.tagged_user) for t in s.tags]
         image_url = f"http://127.0.0.1:8000{s.image_url}" if s.image_url else None
+
         result.append({
             "id": s.id,
             "title": s.title,
@@ -328,7 +414,10 @@ def get_my_shoutouts(
             "created_at": s.created_at,
             "edited_at": s.edited_at,
             "image_url": image_url,
-            "tagged_users": tagged_users
+            "tagged_users": tagged_users,
+
+            "reactions": reaction_counts,
+            "my_reaction": my_reaction
         })
 
     return {

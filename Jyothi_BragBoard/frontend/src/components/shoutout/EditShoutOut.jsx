@@ -11,12 +11,32 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
   const [category, setCategory] = useState(shoutout.category || "");
   const [visibility, setVisibility] = useState(shoutout.is_public || "public");
   const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(shoutout.image_url ? `http://127.0.0.1:8000${shoutout.image_url}` : null);
+  const [imagePreview, setImagePreview] = useState(
+    shoutout.image_url ? `http://127.0.0.1:8000${shoutout.image_url}` : null
+  );
   const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   const tagRef = useRef();
 
-  // -------------------- FETCH USERS --------------------
+  const originalData = {
+    message: shoutout.message || "",
+    category: shoutout.category || "",
+    is_public: shoutout.is_public || "public",
+    tagged_user_ids: shoutout.tagged_users?.map(u => u.id) || [],
+    image_url: shoutout.image_url ? `http://127.0.0.1:8000${shoutout.image_url}` : null,
+  };
+
+  const isChanged = () => {
+    const currentData = {
+      message,
+      category,
+      is_public: visibility,
+      tagged_user_ids: taggedUsers.map(u => u.id),
+      image_url: imagePreview,
+    };
+    return JSON.stringify(currentData) !== JSON.stringify(originalData);
+  };
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -37,7 +57,6 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [currentUser.id]);
 
-  // -------------------- TAG USER --------------------
   const toggleTagUser = (user) => {
     if (taggedUsers.some(u => u.id === user.id)) {
       setTaggedUsers(taggedUsers.filter(u => u.id !== user.id));
@@ -50,7 +69,6 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
     setTaggedUsers(taggedUsers.filter(u => u.id !== userId));
   };
 
-  // -------------------- IMAGE --------------------
   const handleImageUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -64,21 +82,15 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
     setImagePreview(null);
   };
 
-  // -------------------- UPDATE SHOUTOUT --------------------
   const handleUpdate = async () => {
-    if (!message.trim() || !category) {
-      alert("Please fill in message and category!");
-      return;
-    }
+    if (!isChanged()) return; 
 
     try {
       let image_url = shoutout.image_url || null;
 
       if (imageFile) {
-        // upload new image
         image_url = await ApiService.uploadImage(imageFile);
       } else if (!imagePreview) {
-        // user removed image
         image_url = null;
       }
 
@@ -103,18 +115,16 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
     <div className="p-6 bg-white rounded-xl shadow-lg border border-gray-200">
       <h2 className="text-2xl font-bold mb-4 text-violet-600">Edit Shout-Out</h2>
 
-      {/* Message */}
       <textarea
-        className="w-full h-32 p-3 border rounded-lg mb-4 hover:border-violet-500 bg-white shadow-sm resize-none"
+        className="w-full h-32 p-3 border rounded-lg mb-4 bg-white shadow-sm resize-none"
         placeholder="Update your message..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
 
-      {/* Tag Users */}
       <div className="relative mb-4" ref={tagRef}>
         <button
-          className="w-full text-left p-3 border rounded-lg hover:border-violet-500 focus:outline-none bg-white shadow-sm flex flex-wrap gap-1 items-center min-h-[2.5rem]"
+          className="w-full text-left p-3 border rounded-lg bg-white shadow-sm flex flex-wrap gap-1 items-center min-h-[2.5rem]"
           onClick={(e) => { e.stopPropagation(); setShowTagDropdown(!showTagDropdown); }}
         >
           {taggedUsers.length === 0 ? (
@@ -147,9 +157,8 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
         )}
       </div>
 
-      {/* Image Upload */}
       <div className="mb-4">
-        <label className="cursor-pointer inline-flex items-center gap-2 p-3 border rounded-lg hover:border-violet-500 bg-white shadow-sm">
+        <label className="cursor-pointer inline-flex items-center gap-2 p-3 border rounded-lg bg-white shadow-sm">
           <ImageIcon size={20} />
           <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -157,19 +166,15 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
 
         {imagePreview && (
           <div className="mt-2 flex items-center gap-2 bg-gray-100 p-2 rounded-lg w-max">
-            <img 
-              src={imagePreview} 
-              alt="Preview" 
-              className="w-40 rounded-lg border" />
+            <img src={imagePreview} alt="Preview" className="w-40 rounded-lg border" />
             <button type="button" className="text-red-500 font-bold hover:text-red-700" onClick={removeImage}>❌</button>
           </div>
         )}
       </div>
 
-      {/* Category */}
       <div className="mb-4">
         <select
-          className="w-full p-3 border rounded-lg focus:outline-none hover:border-violet-500 bg-white shadow-sm"
+          className="w-full p-3 border rounded-lg bg-white shadow-sm"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -183,10 +188,9 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
         </select>
       </div>
 
-      {/* Visibility */}
       <div className="mb-6">
         <select
-          className="w-full p-3 border rounded-lg focus:outline-none hover:border-violet-500 bg-white shadow-sm"
+          className="w-full p-3 border rounded-lg bg-white shadow-sm"
           value={visibility}
           onChange={(e) => setVisibility(e.target.value)}
         >
@@ -196,10 +200,20 @@ const EditShoutOut = ({ shoutout, currentUser, onCancel, onUpdated }) => {
         </select>
       </div>
 
-      {/* Buttons */}
       <div className="flex justify-end gap-3">
         <button onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-        <button onClick={handleUpdate} className="px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600">Update</button>
+
+        <button
+          onClick={handleUpdate}
+          disabled={!isChanged()}
+          className={`px-4 py-2 rounded-lg text-white transition ${
+            isChanged()
+              ? "bg-violet-500 hover:bg-violet-600"
+              : "bg-gray-300 cursor-not-allowed"
+          }`}
+        >
+          Update
+        </button>
       </div>
     </div>
   );
