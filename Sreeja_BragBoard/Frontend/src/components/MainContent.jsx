@@ -1,273 +1,526 @@
-import { useEffect, useMemo, useState } from 'react'
-import api from '../services/api'
+import { useState, useEffect, useCallback } from 'react';
+import api from '../services/api';
 
-const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) => {
+const MainContent = ({ activeView, selectedDepartment }) => {
+  // Additional state for filters and image preview
+  const [imagePreview, setImagePreview] = useState(null);
+  const [shoutOuts, setShoutOuts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    message: '',
+    receiver_id: '',
+    category: 'teamwork',
+    is_public: 'public',
+    file: null
+  });
+  const [filters, setFilters] = useState({
+    senderSearch: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [users, setUsers] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [myShoutouts, setMyShoutouts] = useState({ given: [], received: [] });
+  const [loadingMyShoutouts, setLoadingMyShoutouts] = useState(true);
+
+  // Fetch my shoutouts when activeView changes to 'my-shoutouts'
+  useEffect(() => {
+    const fetchMyShoutouts = async () => {
+      if (activeView !== 'my-shoutouts') return;
+      
+      setLoadingMyShoutouts(true);
+      try {
+        const [given, received] = await Promise.all([
+          api.getMyShoutouts('given'),
+          api.getMyShoutouts('received')
+        ]);
+        setMyShoutouts({ given, received });
+      } catch (error) {
+        console.error('Error fetching my shoutouts:', error);
+        setErrorMessage('Failed to load your shoutouts');
+      } finally {
+        setLoadingMyShoutouts(false);
+      }
+    };
+
+    fetchMyShoutouts();
+  }, [activeView]);
+
+  // Fetch users and shoutouts
+  const fetchUsers = useCallback(async () => {
+    try {
+      console.log('Fetching users for department:', selectedDepartment);
+      const data = await api.searchUsers(selectedDepartment);
+      console.log('Fetched users:', data);
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setErrorMessage('Failed to load users list');
+    }
+  }, [selectedDepartment]);
+
+  const fetchShoutOuts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.getShoutoutsFeed({
+        department: selectedDepartment,
+        senderId: filters.senderSearch ? parseInt(filters.senderSearch) : null,
+        startDate: filters.startDate ? new Date(filters.startDate) : null,
+        endDate: filters.endDate ? new Date(filters.endDate) : null
+      });
+      setShoutOuts(data);
+    } catch (error) {
+      console.error('Error fetching shout-outs:', error);
+      setErrorMessage('Failed to load shoutouts');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDepartment, filters.senderSearch, filters.startDate, filters.endDate]);
+
+  useEffect(() => {
+    fetchUsers();
+    if (activeView === 'feed') {
+      fetchShoutOuts();
+    }
+  }, [activeView, fetchUsers, fetchShoutOuts]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, files } = e.target;
+    if (type === 'file') {
+      const file = files[0];
+      setFormData(prev => ({
+        ...prev,
+        file: file
+      }));
+      // Create image preview
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setImagePreview(null);
+      }
+    } else if (name.startsWith('filter_')) {
+      const filterName = name.replace('filter_', '');
+      setFilters(prev => ({
+        ...prev,
+        [filterName]: value
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!formData.title.trim() || !formData.message.trim() || !formData.receiver_id) {
+      setErrorMessage('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      await api.createShoutout({
+        title: formData.title,
+        message: formData.message,
+        receiver_id: parseInt(formData.receiver_id),
+        category: formData.category,
+        is_public: formData.is_public,
+        file: formData.file
+      });
+
+      setSuccessMessage('Shout-out created successfully!');
+      setFormData({
+        title: '',
+        message: '',
+        receiver_id: '',
+        category: 'teamwork',
+        is_public: 'public',
+        file: null
+      });
+      setImagePreview(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      fetchShoutOuts();
+    } catch (error) {
+      setErrorMessage(error.message || 'Failed to create shout-out');
+    }
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case 'feed':
-        return <ShoutOutFeed selectedDepartment={selectedDepartment} user={user} setActiveView={setActiveView} />
-      case 'create':
-        return <CreateShoutOut user={user} />
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Shout-Out Feed</h2>
+              <p className="text-gray-600">
+                {selectedDepartment === 'all'
+                  ? 'Showing shout-outs from all departments'
+                  : `Showing shout-outs from ${selectedDepartment} department`}
+              </p>
+            </div>
+
+            {/* Create Shout-Out Form */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Create Shout-Out</h3>
+              
+              {successMessage && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                  {successMessage}
+                </div>
+              )}
+              
+              {errorMessage && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {errorMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Filter Section */}
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Filter Shoutouts</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Sender Name</label>
+                      <input
+                        type="text"
+                        name="filter_senderSearch"
+                        value={filters.senderSearch}
+                        onChange={handleInputChange}
+                        placeholder="Search by sender..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        name="filter_startDate"
+                        value={filters.startDate}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">End Date</label>
+                      <input
+                        type="date"
+                        name="filter_endDate"
+                        value={filters.endDate}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Great work on the project"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Message <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    placeholder="Write your appreciation message..."
+                    rows="4"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Receiver */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Send to <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="receiver_id"
+                    value={formData.receiver_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a colleague</option>
+                    {users && users.length > 0 ? (
+                      users.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.department})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No colleagues available in this department</option>
+                    )}
+                  </select>
+                  {selectedDepartment === 'all' && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      Tip: Select a specific department to see colleagues from that department
+                    </p>
+                  )}
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="teamwork">Teamwork</option>
+                    <option value="innovation">Innovation</option>
+                    <option value="leadership">Leadership</option>
+                    <option value="customer_service">Customer Service</option>
+                    <option value="problem_solving">Problem Solving</option>
+                    <option value="mentorship">Mentorship</option>
+                  </select>
+                </div>
+
+                {/* Visibility */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Visibility <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="is_public"
+                    value={formData.is_public}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="public">🌍 Public (Everyone can see)</option>
+                    <option value="department_only">🏢 Department Only</option>
+                    <option value="private">🔒 Private</option>
+                  </select>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Attach Image (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {formData.file && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 mb-2">
+                        Selected file: {formData.file.name}
+                      </p>
+                      {imagePreview && (
+                        <div className="relative w-32 h-32 rounded-lg overflow-hidden">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="object-cover w-full h-full"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, file: null }));
+                              setImagePreview(null);
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700 transition duration-200"
+                >
+                  Create Your First Shout-Out
+                </button>
+              </form>
+            </div>
+
+            {/* Shout-Outs Feed */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">
+                🎉 {shoutOuts.length} Shout-Out{shoutOuts.length !== 1 ? 's' : ''}
+              </h3>
+              
+              {loading ? (
+                <p className="text-gray-600">Loading shout-outs...</p>
+              ) : shoutOuts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">📭</div>
+                  <p className="text-gray-600 mb-2">No Shout-Outs Yet</p>
+                  <p className="text-gray-500">Be the first to spread some positivity!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {shoutOuts.map(shoutout => (
+                    <div key={shoutout.id} className="border-l-4 border-blue-500 pl-4 py-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-gray-800">{shoutout.title}</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            From: <span className="font-semibold">{shoutout.giver_name}</span> ({shoutout.giver_department})
+                          </p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            To: <span className="font-semibold">{shoutout.receiver_name}</span> ({shoutout.receiver_department})
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            {shoutout.category}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 mb-2">{shoutout.message}</p>
+                      {shoutout.image_url && (
+                        <div className="mb-2">
+                          <img
+                            src={`http://127.0.0.1:8000${shoutout.image_url}`}
+                            alt="Shoutout attachment"
+                            className="max-w-sm rounded-lg shadow-md"
+                          />
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-xs text-gray-500">
+                        <span>
+                          {shoutout.is_public === 'public' && '🌍 Public'}
+                          {shoutout.is_public === 'department_only' && '🏢 Department Only'}
+                          {shoutout.is_public === 'private' && '🔒 Private'}
+                        </span>
+                        <span>{new Date(shoutout.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case 'my-shoutouts':
-        return <MyShoutOuts user={user} />
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">My Shout-Outs</h2>
+              <p className="text-gray-600">Appreciations you've shared and received</p>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              {loadingMyShoutouts ? (
+                <div className="text-center py-4">Loading your shoutouts...</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center py-8 border rounded-lg">
+                    <p className="text-3xl font-bold text-blue-600">{myShoutouts.given.length}</p>
+                    <p className="text-gray-600">Appreciations you've shared</p>
+                  </div>
+                  <div className="text-center py-8 border rounded-lg">
+                    <p className="text-3xl font-bold text-green-600">{myShoutouts.received.length}</p>
+                    <p className="text-gray-600">Appreciations you've received</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Display Given Shoutouts */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Shoutouts You've Given</h3>
+              {myShoutouts.given.length === 0 ? (
+                <p className="text-gray-600 text-center py-4">You haven't given any shoutouts yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {myShoutouts.given.map(shoutout => (
+                    <div key={shoutout.id} className="border-l-4 border-blue-500 pl-4 py-2">
+                      <h4 className="font-bold text-gray-800">{shoutout.title}</h4>
+                      <p className="text-sm text-gray-600">To: {shoutout.receiver_name}</p>
+                      <p className="text-gray-700 mt-2">{shoutout.message}</p>
+                      <div className="text-xs text-gray-500 mt-2">
+                        {new Date(shoutout.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Display Received Shoutouts */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Shoutouts You've Received</h3>
+              {myShoutouts.received.length === 0 ? (
+                <p className="text-gray-600 text-center py-4">You haven't received any shoutouts yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {myShoutouts.received.map(shoutout => (
+                    <div key={shoutout.id} className="border-l-4 border-green-500 pl-4 py-2">
+                      <h4 className="font-bold text-gray-800">{shoutout.title}</h4>
+                      <p className="text-sm text-gray-600">From: {shoutout.giver_name}</p>
+                      <p className="text-gray-700 mt-2">{shoutout.message}</p>
+                      <div className="text-xs text-gray-500 mt-2">
+                        {new Date(shoutout.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case 'analytics':
-        return <Analytics user={user} />
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Analytics</h2>
+              <p className="text-gray-600">Detailed analytics and insights</p>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <p className="text-gray-600">Detailed analytics and insights will be available in a future update.</p>
+            </div>
+          </div>
+        );
+
       default:
-        return <ShoutOutFeed selectedDepartment={selectedDepartment} user={user} setActiveView={setActiveView} />
+        return <div>Select a view from the navigation</div>;
     }
-  }
+  };
 
   return (
-    <main className="flex-1 p-6">
-      <div className="max-w-4xl mx-auto">
-        {renderContent()}
-      </div>
-    </main>
-  )
-}
-
-// Shout-Out Feed Component
-const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
-  return (
-    <div className="space-y-6">
-      {/* Feed Header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-              Shout-Out Feed
-            </h2>
-            <p className="text-gray-600 mt-1">
-              {selectedDepartment === 'all' 
-                ? 'Showing shout-outs from all departments' 
-                : `Showing shout-outs from ${selectedDepartment} department`
-              }
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium">
-              🎉 0 Shout-Outs
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Empty State */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-12 border border-white/20 text-center">
-        <div className="w-20 h-20 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">No Shout-Outs Yet</h3>
-        <p className="text-gray-600 mb-6">
-          Be the first to spread some positivity! Create a shout-out to appreciate your colleagues.
-        </p>
-        <button onClick={() => setActiveView('create')} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
-          Create Your First Shout-Out
-        </button>
-      </div>
+    <div className="flex-1 p-6 overflow-y-auto h-full bg-gray-50">
+      {renderContent()}
     </div>
-  )
-}
+  );
+};
 
-// Create Shout-Out Component
-const CreateShoutOut = ({ user }) => {
-  const [message, setMessage] = useState('')
-  const [visibility, setVisibility] = useState('public')
-  const [search, setSearch] = useState('')
-  const [department, setDepartment] = useState('all')
-  const [results, setResults] = useState([])
-  const [selected, setSelected] = useState([])
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      try {
-        const data = await api.searchUsers({ department, search })
-        if (!cancelled) setResults(data)
-      } catch (e) {
-        if (!cancelled) setResults([])
-      }
-    }
-    run()
-    return () => { cancelled = true }
-  }, [department, search])
-
-  const addRecipient = (u) => {
-    if (!selected.find(x => x.id === u.id)) {
-      setSelected([...selected, u])
-    }
-  }
-
-  const removeRecipient = (id) => {
-    setSelected(selected.filter(x => x.id !== id))
-  }
-
-  const canSubmit = useMemo(() => {
-    return message.trim() && selected.length > 0
-  }, [message, selected])
-
-  const onSubmit = async (e) => {
-    e.preventDefault()
-    if (!canSubmit) return
-    setSubmitting(true)
-    setError('')
-    setSuccess('')
-    try {
-      await api.createShoutOutMulti({
-        message: message.trim(),
-        recipient_ids: selected.map(s => s.id),
-        is_public: visibility,
-      })
-      setMessage('')
-      setSelected([])
-      setSuccess('Shout-out created successfully')
-    } catch (e) {
-      const msg = typeof e?.message === 'string' ? e.message : (e ? JSON.stringify(e) : 'Failed to create shout-out')
-      setError(msg || 'Failed to create shout-out')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
-          Create Shout-Out
-        </h2>
-
-        {error ? (
-          <div className="mb-4 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{typeof error === 'string' ? error : JSON.stringify(error)}</div>
-        ) : null}
-        {success ? (
-          <div className="mb-4 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</div>
-        ) : null}
-
-        <form onSubmit={onSubmit} className="space-y-5">
-          {/* Category removed as requested */}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-            <textarea value={message} onChange={(e)=>setMessage(e.target.value)} rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Write your appreciation message..." />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
-              <select value={visibility} onChange={(e)=>setVisibility(e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="public">Public</option>
-                <option value="department_only">Department Only</option>
-                <option value="private">Private</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search Recipients</label>
-              <div className="flex gap-2">
-                <select value={department} onChange={(e)=>setDepartment(e.target.value)} className="border rounded-lg px-2 py-2">
-                  <option value="all">All Departments</option>
-                  <option value="engineering">Engineering</option>
-                  <option value="sales">Sales</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="hr">HR</option>
-                  <option value="finance">Finance</option>
-                </select>
-                <input value={search} onChange={(e)=>setSearch(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type a name..." />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded-xl p-3">
-              <div className="text-sm font-medium text-gray-700 mb-2">Search Results</div>
-              <div className="max-h-40 overflow-auto divide-y">
-                {results.map(u => (
-                  <button key={u.id} type="button" onClick={()=>addRecipient(u)} className="w-full text-left px-2 py-2 hover:bg-gray-50">
-                    {u.name} <span className="text-gray-500 text-xs">({u.department})</span>
-                  </button>
-                ))}
-                {!results.length && <div className="text-gray-500 text-sm px-2 py-2">No users</div>}
-              </div>
-            </div>
-            <div className="border rounded-xl p-3">
-              <div className="text-sm font-medium text-gray-700 mb-2">Selected Recipients</div>
-              <div className="flex flex-wrap gap-2">
-                {selected.map(u => (
-                  <span key={u.id} className="inline-flex items-center bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm">
-                    {u.name}
-                    <button type="button" onClick={()=>removeRecipient(u.id)} className="ml-2 text-indigo-600 hover:text-indigo-800">×</button>
-                  </span>
-                ))}
-                {!selected.length && <div className="text-gray-500 text-sm">No recipients selected</div>}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <button disabled={!canSubmit || submitting} className="bg-gradient-to-r from-indigo-500 to-purple-600 disabled:opacity-50 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
-              {submitting ? 'Submitting...' : 'Create Shout-Out'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-// My Shout-Outs Component
-const MyShoutOuts = ({ user }) => {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
-          My Shout-Outs
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">Shout-Outs Given</h3>
-            <div className="text-3xl font-bold text-green-700 mb-2">0</div>
-            <p className="text-green-600 text-sm">Appreciations you've shared</p>
-          </div>
-          
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-blue-800 mb-2">Shout-Outs Received</h3>
-            <div className="text-3xl font-bold text-blue-700 mb-2">0</div>
-            <p className="text-blue-600 text-sm">Appreciations you've received</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Analytics Component
-const Analytics = ({ user }) => {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
-          Analytics Dashboard
-        </h2>
-        
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6 text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-purple-800 mb-2">Analytics Coming Soon!</h3>
-          <p className="text-purple-700">
-            Detailed analytics and insights will be available in Week 7-8 of the project timeline.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default MainContent
+export default MainContent;

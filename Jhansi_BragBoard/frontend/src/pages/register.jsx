@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../api/auth";
@@ -25,64 +24,81 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen w-screen bg-gradient-to-r from-green-400 to-blue-500">
-      <form
-        onSubmit={handleRegister}
-        className="bg-white p-10 sm:p-12 rounded-2xl shadow-2xl w-full max-w-md text-center"
-      >
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">Register</h2>
+    <div className="flex items-center justify-center h-screen w-screen bg-gray-900">
+      <div className="bg-gray-800 text-white p-8 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md">
+        <h1 className="text-4xl font-extrabold text-blue-400 text-center mb-6 tracking-wide">
+          BragBoard
+        </h1>
+        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-100">
+          Create Your Account
+        </h2>
 
-        <input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-3 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-green-400"
-          required
-        />
+        <form onSubmit={handleRegister}>
+          <input
+            type="text"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-3 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-green-400"
-          required
-        />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-3 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-green-400"
-          required
-        />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
 
-        {/* Department Dropdown */}
-        <select
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-          className="border p-3 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-green-400"
-          required
-        >
-          <option value="">-- Select Department --</option>
-          <option value="IT">IT</option>
-          <option value="HR">HR</option>
-          <option value="Finance">Finance</option>
-          <option value="Marketing">Marketing</option>
-          <option value="Operations">Operations</option>
-        </select>
+          <select
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="">-- Select Department --</option>
+            <option value="IT">IT</option>
+            <option value="HR">HR</option>
+            <option value="Finance">Finance</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Operations">Operations</option>
+          </select>
 
-        <button
-          type="submit"
-          className="w-full bg-green-500 text-white p-3 rounded-xl hover:bg-green-600 transition-colors"
-        >
-          Register
-        </button>
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl font-semibold transition-all duration-200"
+          >
+            Register
+          </button>
 
-        {message && <p className="mt-4 text-red-500 text-center">{message}</p>}
-      </form>
+          {message && (
+            <p className="mt-4 text-red-400 text-center text-sm font-medium">
+              {message}
+            </p>
+          )}
+        </form>
+
+        <p className="mt-6 text-gray-400 text-center">
+          Already have an account?{" "}
+          <span
+            onClick={() => navigate("/login")}
+            className="text-blue-400 hover:underline cursor-pointer font-semibold"
+          >
+            Login here
+          </span>
+        </p>
+      </div>
     </div>
   );
 }

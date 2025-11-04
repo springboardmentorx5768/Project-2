@@ -128,3 +128,134 @@ Solved using absolute positioning and z-index in Tailwind CSS.
 🎯 Outcome
 
 Shout-outs can now be created, tagged, and displayed dynamically. The Dashboard became interactive and user-friendly, meeting all Week 3 goals successfully. 🚀
+
+🌈 Week 4 — Shout-out Feed, Filters, Image Uploads & Dashboard Enhancements
+✅ What I Did
+
+Implemented the Shout-out Feed page to display all shout-outs.
+
+Added filter options to sort shout-outs by:
+
+Department
+
+Sender
+
+Date
+
+Enhanced Dashboard Statistics:
+
+Shows My Shoutouts, Team Members, Posts Today.
+
+Fixed team member count to exclude the logged-in user.
+
+Added image and file upload support in Post Shoutout form:
+
+Users can now attach photos or images along with their messages.
+
+Implemented backend file handling with UploadFile in FastAPI.
+
+Stored uploaded file URLs and displayed them dynamically on the feed.
+
+Added emoji support (🎉 👏 ❤️) in shoutouts for expressive posts — no backend setup required, handled natively on frontend.
+
+Cleaned up backend logs — removed all debug prints and sensitive token details from terminal output.
+
+Improved UI styling for better spacing, responsive layout, and smooth animations.
+
+⚠️ Errors / Issues Faced
+
+Incorrect Team Member Count —
+✅ Fixed logic to exclude current user from HR department count.
+
+Filter Not Updating Feed —
+✅ Updated React state to trigger API re-fetch on filter change.
+
+File Upload Handling Issue —
+✅ Corrected file field type and configured static file serving.
+
+Emoji Encoding —
+✅ Verified UTF-8 support; used direct emoji characters.
+
+Verbose Logs Showing Tokens —
+✅ Removed debug prints after testing completion.
+
+🎯 Outcome
+
+The Week 4 update made BragBoard feature-rich and production-ready 🎊
+
+Users can post shout-outs with text, emojis, and images.
+
+Feed supports dynamic filtering and real-time updates.
+
+Dashboard statistics are accurate and insightful.
+
+The overall platform now feels like a professional recognition and celebration board — vibrant, social, and rewarding! 💫 
+
+🌟 Week 5 — Add Reactions & Implement Reaction Counters with User Tracking
+
+✅ What I Did
+
+Added interactive Reactions (Like 👍, Clap 👏, and Star ⭐) feature for all shout-outs on the feed.
+
+Implemented Reaction Counters for each post — dynamically displaying total counts beside every emoji.
+
+Enabled User-Specific Reaction Tracking:
+
+When a user clicks a reaction, it’s stored in the backend linked to both the user and shoutout.
+
+The selected reaction turns blue, visually confirming the user’s response.
+
+Users can toggle reactions on/off anytime.
+
+Integrated the frontend with new backend APIs:
+
+POST /reactions/{shoutout_id} — to add or toggle a user’s reaction.
+
+GET /reactions/{shoutout_id} — to fetch all reactions and counts per post.
+
+Enhanced the Shoutout Feed to show live updates:
+
+Reaction counts and colors update instantly without reloading the page.
+
+When navigating away and coming back, reactions persist based on saved user data.
+
+Updated the models.py, schemas.py, and main.py to include:
+
+Reaction model with foreign keys to both User and ShoutOut.
+
+Logic to handle toggling (add/remove) reactions efficiently.
+
+Aggregated counts per reaction type for each shoutout.
+
+⚠️ Errors / Issues Faced
+
+🔸 Reactions Not Persisting After Refresh
+
+Initially, reactions didn’t save permanently.
+
+Fixed by creating a dedicated Reaction model and linking it to User and ShoutOut.
+
+🔸 Duplicate Reaction Entries
+
+Multiple entries for same user + shoutout occurred.
+
+Solved by adding a unique constraint and toggle mechanism in backend logic.
+
+🔸 UI Not Updating Immediately
+
+React state didn’t re-render after reacting.
+
+Fixed by updating local state using setShoutouts() after each successful API response.
+
+🔸 Count Mismatch Between Frontend and Backend
+
+Counters weren’t syncing correctly.
+
+Resolved by fetching updated reaction data after each toggle.
+
+🎯 Outcome
+
+Week 5 introduced social engagement to BragBoard 🎉
+Users can now express appreciation for others’ shoutouts using reactions — making the platform more interactive and rewarding.
+
+✨ The system accurately tracks each user’s reactions, updates counts in real-time, and ensures data consistency across frontend and backend.

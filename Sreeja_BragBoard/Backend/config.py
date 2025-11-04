@@ -18,3 +18,4 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 # Environment
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+

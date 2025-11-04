@@ -62,7 +62,42 @@ class UserOut(BaseModel):
     model_config = {
         "from_attributes": True
     }
+    
+class UserUpdate(BaseModel):
+    username: Optional[str]
+    email: Optional[EmailStr]
+    department: Optional[str]
+    role: Optional[str]
 
+# ===== Reaction Schemas =====
+class ReactionBase(BaseModel):
+    reaction_type: str   # like, love, clap, celebrate, etc.
+
+
+class ReactionResponse(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    reaction_type: str
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class AddReactionRequest(BaseModel):
+    reaction_type: str
+
+class ReactionCountResponse(BaseModel):
+    like: int = 0
+    love: int = 0
+    clap: int = 0
+    celebrate: int = 0
+    insightful: int = 0
+    support: int = 0
+    star: int = 0
+    my_reaction: Optional[str] = None
 
 # ===== ShoutOut Schemas =====
 class ShoutOutCreate(BaseModel):
@@ -77,6 +112,8 @@ class ShoutOutCreate(BaseModel):
 
 class ShoutOutResponse(BaseModel):
     id: int
+    giver_id: int          
+    receiver_id: int 
     title: str
     message: str
     giver_name: str
@@ -89,12 +126,21 @@ class ShoutOutResponse(BaseModel):
     category: CategoryEnum
     is_public: VisibilityEnum
     created_at: datetime
+    edited_at: Optional[datetime] = None
     image_url: Optional[str] = None
+    reactions: List[ReactionResponse] = []
 
     model_config = {
         "from_attributes": True
     }
 
+class ShoutOutUpdate(BaseModel):
+    title: Optional[str] = None
+    message: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    is_public: Optional[str] = None  # "public", "department_only", "private"
+    tagged_user_ids: Optional[List[int]] = None  
 
 class DepartmentStats(BaseModel):
     department: str
@@ -105,3 +151,4 @@ class DepartmentStats(BaseModel):
     model_config = {
         "from_attributes": True
     }
+

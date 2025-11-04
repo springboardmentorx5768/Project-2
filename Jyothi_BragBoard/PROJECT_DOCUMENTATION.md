@@ -1,4 +1,4 @@
-**BragBoard Project – Week 1, Week 2 & Week 3 Documentation**<br><br>
+**BragBoard Project_Documentation**<br><br>
 **Project Overview**<br><br>
 BragBoard is an internal recognition tool that enables employees to appreciate their colleagues by posting shout-outs.
 It promotes a positive workplace culture by allowing tagging, commenting, and visible appreciation across the organization.Admins can oversee activities, track engagement, and moderate flagged content.<br><br>
@@ -29,51 +29,64 @@ BragBoard is a full-stack web application that connects employees within a compa
 -python-jose & passlib – For encryption and token management<br><br>
 **📁 Project Structure**
 ```
-BragBoard/
+Jyothi_BragBoard/
+│
 ├── backend/
-│   ├── main.py
-│   ├── models.py
-│   ├── auth.py
-│   ├── database.py
-│   ├── routers/
-│   │   └── users.py
-│   ├── uploads/                # Stores all uploaded images
-│   ├── requirements.txt
-│   └── .env
+│ ├── main.py
+│ ├── config.py
+│ ├── database.py
+│ ├── database_models.py
+│ ├── schemas.py
+│ ├── auth.py
+│ ├── check_db.py
+│ │
+│ ├── routers/
+│ │ ├── users.py
+│ │ ├── shoutouts.py
+│ │ └── reactions.py ← NEW
+│ │
+│ ├── uploads/
+│ │ └── (image files saved here)
+│ │
+│ ├── requirements.txt
+│ └── .env
 │
 ├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── auth/
-│   │   │   │   ├── Auth.jsx
-│   │   │   │   ├── Login.jsx
-│   │   │   │   └── Register.jsx
-│   │   │   ├── dashboard/
-│   │   │   │   ├── Dashboard.jsx
-│   │   │   │   ├── DashboardContent.jsx
-│   │   │   │   ├── Header.jsx
-│   │   │   │   ├── MainContent.jsx
-│   │   │   │   ├── ShoutOutFeed.jsx
-│   │   │   │   ├── ShoutOutForm.jsx
-│   │   │   │   ├── MyShoutOuts.jsx
-│   │   │   │   ├── Settings.jsx
-│   │   │   │   └── Sidebar.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
-├── reports/                    # Contains weekly documentation
-│   ├── week1.md
-│   ├── week2.md
-│   └── week3.md
+│ ├── src/
+│ │ ├── components/
+│ │ │ ├── auth/
+│ │ │ │ ├── Auth.jsx
+│ │ │ │ ├── Login.jsx
+│ │ │ │ └── Register.jsx
+│ │ │ │
+│ │ │ ├── dashboard/
+│ │ │ │ ├── Dashboard.jsx
+│ │ │ │ ├── Header.jsx
+│ │ │ │ ├── Sidebar.jsx
+│ │ │ │ ├── Settings.jsx
+│ │ │ │ ├── MainContent.jsx
+│ │ │ │ └── DashboardContent.jsx
+│ │ │ │
+│ │ │ ├── shoutouts/
+│ │ │ │ ├── ShoutOutFeed.jsx
+│ │ │ │ ├── ShoutOutForm.jsx
+│ │ │ │ ├── ShoutOutPage.jsx
+│ │ │ │ ├── MyShoutOuts.jsx
+│ │ │ │ ├── EditShoutOut.jsx
+│ │ │ │ └── ReactionBar.jsx ← NEW
+│ │ │
+│ │ ├── services/
+│ │ │ └── api.js
+│ │ │
+│ │ ├── App.jsx
+│ │ └── index.css
+│ │
+│ ├── package.json
+│ ├── vite.config.js
+│ └── tailwind.config.js
 │
 ├── .gitignore
 └── PROJECT_DOCUMENTATION.md
-
 ```
 
 **Week 1 – Project Setup & Authentication**<br><br>
@@ -147,3 +160,53 @@ POST /login → User authentication and JWT generation<br>
 -Shout-outs are stored in the database with tagged user information<br>
 -Shout-out feed dynamically displays posts, tagged users, and reactions<br>
 -Supports image upload for better visual recognition<br><br>
+
+**Week 4 – Shout-Out Feed Enhancements & Filtering**<br><br>
+**Tasks Completed**<br>
+-Displayed all shout-outs on the main feed<br>
+-Implemented filters by department, sender, and date<br>
+-Added support for attachments or image uploads in shout-outs (optional)<br><br>
+**Implementation Details**<br>
+-Enhanced ShoutOutFeed.jsx to fetch and display all shout-outs dynamically from the backend<br>
+-Integrated backend endpoint /shoutouts/feed to return all posts along with user and tagged details<br>
+-Implemented filter functionality:<br>
+-Department filter → allows users to view shout-outs from specific departments or all<br>
+-Sender filter → view shout-outs created by specific users<br>
+-Date filter → display shout-outs from a selected date range<br>
+-Added total shout-out count in the feed section (updates automatically when filters are applied)<br>
+-Included timestamps for created and edited posts:<br>
+     - created_at shows when a shout-out was posted<br>
+     - edited_at updates only when a shout-out is edited<br>
+-Optional enhancement: Added support for displaying images or attachments in the shout-out feed<br>
+-Improved frontend UI with gradient backgrounds and smooth transitions using Tailwind CSS<br><br>
+**Output**<br>
+-Feed displays all shout-outs across departments<br>
+-Filters allow users to refine view by department, sender, and date<br>
+-Total shout-out count updates dynamically with filter selection<br>
+-Edited posts show “Edited” timestamp properly<br>
+-Attachments/images are visible in the feed for better visual engagement<br><br>
+
+**Week 5 – Reaction Feature Implementation**<br><br>
+**Tasks Completed**<br>
+-Added reactions to shout-outs (Like 👍, Clap 👏, Star ⭐)<br>
+-Implemented reaction counters for each post<br>
+-Enabled user-specific reaction tracking (each user can react/unreact)
+<br>
+-Added popup to view list of users who reacted<br><br>
+
+**Implementation Details**<br><br>
+-Added reaction buttons in the shout-out feed UI<br>
+-Reactions are stored in the database linked to:<br>
+-shoutout_id<br>
+-user_id<br>
+-reaction_type(like/clap/star)<br>
+-Clicking a reaction toggles it (adds if not reacted, removes if already reacted)
+<br>
+-Reaction counts update instantly after each action<br>
+-Clicking on the reaction count opens a popup showing the list of users who reacted<br>
+-Popup closes on outside-click or re-click<br><br>
+
+**Output**<br><br>
+-Each shout-out now displays total reactions per type<br>
+-Users can interact and appreciate posts more meaningfully<br>
+-Reaction data is maintained per user, ensuring accurate counts<br>

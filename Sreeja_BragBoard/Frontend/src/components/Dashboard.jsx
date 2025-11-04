@@ -8,11 +8,11 @@ const Dashboard = ({ user, onLogout }) => {
   const [activeView, setActiveView] = useState('feed')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
       <Header user={user} onLogout={onLogout} />
       
-      <div className="flex">
+      <div className="flex flex-1">
         {/* Sidebar */}
         <Sidebar 
           activeView={activeView}
@@ -25,7 +25,6 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Main Content */}
         <MainContent 
           activeView={activeView}
-          setActiveView={setActiveView}
           selectedDepartment={selectedDepartment}
           user={user}
         />

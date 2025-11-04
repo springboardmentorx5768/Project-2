@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr
 from database import get_db
 from models import User
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, get_current_user
+from typing import List
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -13,6 +14,14 @@ class UserCreate(BaseModel):
     password: str
     department: str
     role: str = "employee"
+
+class UserList(BaseModel):
+    id: int
+    name: str
+    department: str
+    
+    class Config:
+        from_attributes = True
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -86,3 +95,23 @@ def get_user_profile(current_user: User = Depends(get_current_user)):
         role=current_user.role,
         joined_at=current_user.joined_at.isoformat()
     )
+
+@router.get("/list", response_model=List[UserList])
+def list_users(
+    department: str = None,
+    search: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get list of users filtered by department and/or search term"""
+    query = db.query(User).filter(User.id != current_user.id)  # Exclude current user
+    
+    if department and department != "all":
+        query = query.filter(User.department == department)
+    
+    if search:
+        query = query.filter(User.name.ilike(f"%{search}%"))
+    
+    users = query.all()
+    return users
+

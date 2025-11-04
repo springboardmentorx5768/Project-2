@@ -89,13 +89,17 @@ class ApiService {
   }
 
   // -------------------- GET MY SHOUTOUTS --------------------
-  async getMyShoutouts({ department = "all" } = {}) {
-    const res = await fetch(`${API_BASE_URL}/shoutouts/my-shoutouts?department=${department}`, {
-      headers: this.getHeaders(),
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || "Failed to fetch my shoutouts");
+  async getMyShoutouts({ receiver_department = "all", days } = {}) {
+    let url = `${API_BASE_URL}/shoutouts/my-shoutouts?receiver_department=${receiver_department}`;
+    if (days) url += `&days=${days}`;
+    const res = await fetch(url, { headers: this.getHeaders() });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || "Failed to fetch my shoutouts");
+    }
     return await res.json();
   }
+  
 
   // -------------------- SEARCH USERS --------------------
   async searchUsers({ department = "all", search = "" } = {}) {
@@ -107,23 +111,30 @@ class ApiService {
   }
 
   // -------------------- REACTIONS --------------------
-  async addReaction(shoutout_id, type) {
+  async addReaction(shoutout_id, reaction_type) {
     const res = await axios.post(
-      `${API_BASE_URL}/shoutouts/${shoutout_id}/reactions`,
-      { type },
-      { headers: this.getHeaders() }
+      `${API_BASE_URL}/reactions/${shoutout_id}`,
+       { reaction_type },
+       { headers: this.getHeaders() }
     );
     return res.data;
   }
 
-  async removeReaction(shoutout_id, type) {
-    const res = await axios.delete(`${API_BASE_URL}/shoutouts/${shoutout_id}/reactions`, {
-      headers: this.getHeaders(),
-      data: { type },
+  async getReactionCounts(shoutout_id) {
+    const res = await axios.get(`${API_BASE_URL}/reactions/${shoutout_id}`, {
+      headers: this.getHeaders()
     });
     return res.data;
   }
-
+  
+  async getReactedUsers(shoutout_id) {
+    const res = await axios.get(
+      `${API_BASE_URL}/reactions/${shoutout_id}/users`,
+      { headers: this.getHeaders() }
+    );
+    return res.data;
+  }
+  
   // -------------------- COMMENTS --------------------
   async addComment(shoutout_id, { user_id, text }) {
     const res = await axios.post(
@@ -149,7 +160,15 @@ class ApiService {
     );
     return res.data;
   }
-
+    
+  // -------------------- UPDATING SHOUTOUT --------------------
+  async updateShoutout(shoutout_id, data) {
+    const res = await axios.put(`${API_BASE_URL}/shoutouts/${shoutout_id}`, data, {
+      headers: this.getHeaders(),
+    });
+    return res.data;
+  }
+  
   // -------------------- DELETE SHOUTOUT --------------------
   async deleteShoutout(shoutout_id) {
     const res = await axios.delete(`${API_BASE_URL}/shoutouts/${shoutout_id}`, {
@@ -167,14 +186,17 @@ class ApiService {
     return await res.json();
   }
 
-  // -------------------- UPDATE USER ACCOUNT --------------------
-  async updateUser(userId, updatedData) {
-    // updating user account
-    const res = await axios.put(`${API_BASE_URL}/users/${userId}`, updatedData, {
-      headers: { Authorization: `Bearer ${this.getToken()}` },
-    });
-    return res.data;
-  }
+// -------------------- UPDATE USER ACCOUNT --------------------
+async updateUser(userId, updatedData) {
+  const res = await axios.put(`${API_BASE_URL}/users/${userId}`, updatedData, {
+    headers: {
+      Authorization: `Bearer ${this.getToken()}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return res.data;
+}
+
 
   // -------------------- DELETE USER ACCOUNT --------------------
   async deleteUser(userId) {

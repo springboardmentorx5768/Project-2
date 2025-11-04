@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, Depends
 from database import engine, get_db
-from routers import users, shoutouts
+from routers import users, shoutouts, reactions
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database_models import Base
@@ -36,4 +36,6 @@ def health_check(db: Session = Depends(get_db)):
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(users.router)
-app.include_router(shoutouts.router)  
+app.include_router(shoutouts.router)
+app.include_router(reactions.router)
+

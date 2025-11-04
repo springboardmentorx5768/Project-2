@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
 from database import get_db
 from database_models import User
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, get_current_user
-from schemas import UserCreate, TokenResponse, UserLogin, UserProfile
+from schemas import UserCreate, TokenResponse, UserLogin, UserProfile, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -77,3 +76,47 @@ def get_all_users(db: Session = Depends(get_db)):
         }
         for u in users
     ]
+
+
+@router.put("/{user_id}")
+def update_user(
+    user_id: int,
+    user_update: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Employees can update only their own data; admins can update any user
+    if current_user.id != user_id and current_user.role.lower() != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to update this user")
+
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update only provided fields
+    for field, value in user_update.dict(exclude_unset=True).items():
+        setattr(db_user, field, value)
+
+    db.commit()
+    db.refresh(db_user)
+    return {
+        "id": db_user.id,
+        "username": db_user.username,
+        "email": db_user.email,
+        "department": db_user.department,
+        "role": db_user.role,
+    }
+
+@router.delete("/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Employees can delete only their own account; admins can delete any account
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete this user")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.delete(user)
+    db.commit()
+    return {"detail": "User deleted successfully"}
