@@ -1,12 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from database import get_db
-from models import User
+from models import User, ActivityLog
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, get_current_user
 from typing import List
+from datetime import datetime
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+# Helper function to log activities
+def log_activity(db: Session, user_id: int, action_type: str, details: str = "", ip_address: str = ""):
+    """Log activity to the database"""
+    try:
+        activity = ActivityLog(
+            user_id=user_id,
+            action_type=action_type,
+            details=details,
+            ip_address=ip_address,
+            created_at=datetime.utcnow()
+        )
+        db.add(activity)
+        db.commit()
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+        db.rollback()
 
 class UserCreate(BaseModel):
     name: str
@@ -44,7 +62,7 @@ class UserProfile(BaseModel):
         from_attributes = True
 
 @router.post("/register", response_model=TokenResponse)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+def register(user: UserCreate, request: Request, db: Session = Depends(get_db)):
     # Check if user exists
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
@@ -64,6 +82,16 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Log activity
+    ip_address = request.client.host if request and request.client else ""
+    log_activity(
+        db=db,
+        user_id=new_user.id,
+        action_type="user_registered",
+        details=f"{new_user.name} ({new_user.department})",
+        ip_address=ip_address
+    )
     
     # Create tokens
     access_token = create_access_token(data={"sub": new_user.email})
@@ -114,4 +142,94 @@ def list_users(
     
     users = query.all()
     return users
+
+@router.get("/all", response_model=List[UserProfile])
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all users (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = db.query(User).all()
+    return [
+        UserProfile(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            department=user.department,
+            role=user.role,
+            joined_at=user.joined_at.isoformat()
+        )
+        for user in users
+    ]
+
+@router.delete("/me/delete")
+def delete_my_account(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete your own account"""
+    # Store user info before deletion
+    deleted_user_name = current_user.name
+    deleted_user_email = current_user.email
+    deleted_user_id = current_user.id
+    
+    # Log activity before deletion
+    ip_address = request.client.host if request and request.client else ""
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        action_type="account_deleted",
+        details=f"{deleted_user_name} deleted their own account",
+        ip_address=ip_address
+    )
+    
+    # Delete the user
+    db.delete(current_user)
+    db.commit()
+    
+    return {
+        "message": f"Account {deleted_user_email} has been permanently deleted",
+        "deleted_user": deleted_user_name
+    }
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a user (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    # Store user info before deletion
+    deleted_user_name = user.name
+    deleted_user_email = user.email
+    
+    db.delete(user)
+    db.commit()
+    
+    # Log activity
+    ip_address = request.client.host if request and request.client else ""
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        action_type="user_deleted",
+        details=f"{deleted_user_name} ({deleted_user_email})",
+        ip_address=ip_address
+    )
+    
+    return {"message": "User deleted successfully"}
 

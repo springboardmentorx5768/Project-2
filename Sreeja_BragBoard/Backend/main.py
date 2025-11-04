@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -6,6 +6,10 @@ from database import engine, SessionLocal, get_db
 from models import Base
 from routers.users import router as users_router
 from routers.shoutouts import router as shoutouts_router
+from routers.activity import router as activity_router
+from routers.reactions import router as reactions_router
+from routers.comments import router as comments_router
+import time
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -31,6 +35,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Middleware to log all requests
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"🌐 Incoming request: {request.method} {request.url.path}")
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    print(f"✅ Response status: {response.status_code} (took {process_time:.2f}s)")
+    return response
+
 @app.get("/")
 def read_root():
     return {"message": "Yes perfect"}
@@ -47,4 +61,7 @@ def health_check(db: Session = Depends(get_db)):
 
 app.include_router(users_router)
 app.include_router(shoutouts_router)
+app.include_router(activity_router)
+app.include_router(reactions_router)
+app.include_router(comments_router)
 

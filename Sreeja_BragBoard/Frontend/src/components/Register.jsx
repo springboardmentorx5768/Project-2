@@ -12,6 +12,7 @@ const Register = ({ onSuccess, onToggleMode }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
     setFormData({
@@ -47,6 +48,8 @@ const Register = ({ onSuccess, onToggleMode }) => {
       localStorage.setItem('access_token', registerResponse.access_token);
       localStorage.setItem('refresh_token', registerResponse.refresh_token);
       
+      setSuccess('✅ Registration successful! Loading your dashboard...');
+      
       // Then, fetch user profile data
       const userProfile = await apiService.getUserProfile();
       
@@ -56,7 +59,9 @@ const Register = ({ onSuccess, onToggleMode }) => {
         ...userProfile
       };
       
-      onSuccess(userData);
+      setTimeout(() => {
+        onSuccess(userData);
+      }, 1500);
     } catch (err) {
       console.error('Registration error in component:', err);
       setError(err.message);
@@ -85,8 +90,14 @@ const Register = ({ onSuccess, onToggleMode }) => {
         
           <form className="space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 animate-fadeInUp">
               <div className="text-sm text-red-700">{error}</div>
+            </div>
+          )}
+          
+          {success && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 animate-fadeInUp">
+              <div className="text-sm text-emerald-700 font-medium">{success}</div>
             </div>
           )}
           
