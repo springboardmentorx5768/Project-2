@@ -78,8 +78,68 @@ BragBoard/
 │   └── README.md              # Frontend README
 ├── .gitignore                 # Git ignore rules for both frontend and backend
 └── PROJECT_DOCUMENTATION.md   # This comprehensive documentation
-```
 
+```
+                                      Infosys Springboard Internship - Week 5
+Task Assigned
+● Add reactions (like, clap, star) to posts
+● Reaction counters + user-specific reaction tracking
+
+Project Description
+
+BragBoard continues to evolve as a full-stack achievement-sharing platform for employees.
+This week focused on enhancing engagement features by introducing reactions to posts.
+The goal was to allow users to express appreciation through interactive reaction options, track individual user responses, and record total counts per post.
+
+Steps I Followed
+
+● Designed and structured reaction icons (Like, Clap, Star) UI on post cards.
+● Built reaction API endpoints to add and remove user reactions.
+● Implemented database schema to track reactions per user and per post.
+● Added reaction counters to show total Likes, Claps, and Stars on each post.
+● Developed logic to prevent duplicate reactions by the same user on the same post.
+● Integrated toggling system so users can remove a previously added reaction.
+● Synced frontend state with backend reaction records using JWT authentication.
+● Implemented real-time UI updates after reacting, using API state management.
+
+📁 Project Structure
+Backend
+
+● Created Reaction model storing post ID, user ID, and reaction type.
+● Built secure FastAPI endpoints for reaction add/remove with authentication.
+● Added controller logic to check user-existing reaction before insertion.
+● Aggregated reaction counts using efficient database queries.
+● Optimized API response to return post reaction summary + user’s reaction type.
+
+Frontend
+
+● Added interactive reaction buttons to each post UI.
+● Displayed real-time reaction count updates on button click.
+● Highlighted the selected reaction for logged-in users.
+● Ensured proper token-based auth before reacting.
+● Handled optimistic UI updates for smooth user experience.
+
+Learnings
+
+● Gained experience building reaction-based UX logic like modern social apps.
+● Learned schema design for many-to-many relations (users ↔ posts via reactions).
+● Improved backend query optimization for aggregate reaction counts.
+● Strengthened React state management for real-time UI refresh.
+● Practiced conditional button rendering and active-state UI logic.
+● Understood strategies to prevent duplicate record insertion in DB.
+
+Errors & Fixes
+Issue	Fix
+Reaction buttons were not updating instantly	Implemented state sync + re-fetch mechanism
+Duplicate reactions created in database	Added backend validation to block duplicates
+Reaction highlight not showing for existing user reactions	Fixed by fetching and mapping user-specific reaction data on post load
+Slow response on rapid multiple reaction clicks	Added debounce logic + disabled repeat clicking temporarily
+Outcomes
+
+● Fully functional reaction system with 3 reaction types.
+● Post cards now show live reaction counters.
+● Users can react only once per type and toggle reactions smoothly.
+● Improved social-interaction experience on BragBoard.
 ---
 
 ## 🏗️ Development Process & Implementation

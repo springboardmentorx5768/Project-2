@@ -18,7 +18,7 @@ const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) =>
   }
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 p-6 overflow-y-auto">
       <div className="max-w-4xl mx-auto">
         {renderContent()}
       </div>
@@ -161,7 +161,7 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
             </span>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg text-sm transition-colors"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg text-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
             >
               {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
@@ -170,7 +170,7 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
 
         {/* Filters */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-gray-200 animate-fadeIn">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sender Name</label>
@@ -204,7 +204,7 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
             <div className="mt-3 flex justify-end">
               <button
                 onClick={clearFilters}
-                className="text-sm text-gray-600 hover:text-gray-800 underline"
+                className="text-sm text-gray-600 hover:text-gray-800 underline transition-all duration-200 hover:scale-105"
               >
                 Clear Filters
               </button>
@@ -215,11 +215,11 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center animate-fadeIn">
           <p className="text-red-700">{error}</p>
           <button
             onClick={fetchShoutouts}
-            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+            className="mt-2 text-sm text-red-600 hover:text-red-800 underline transition-all duration-200 hover:scale-105"
           >
             Try Again
           </button>
@@ -237,27 +237,27 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
       {/* Shout-Outs List */}
       {!loading && !error && shoutouts.length > 0 && (
         <div className="space-y-4">
-          {shoutouts.map((shoutout) => (
-            <div key={shoutout.id} className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
+          {shoutouts.map((shoutout, index) => (
+            <div key={shoutout.id} className="bg-gradient-to-br from-slate-800/60 to-purple-900/40 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20 hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 animate-fadeInUp" style={{ animationDelay: `${index * 100}ms` }}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                     {shoutout.giver_name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-800">{shoutout.giver_name}</h3>
-                    <p className="text-sm text-gray-500">{shoutout.giver_department}</p>
+                    <h3 className="font-semibold text-white">{shoutout.giver_name}</h3>
+                    <p className="text-sm text-gray-300">{shoutout.giver_department}</p>
                   </div>
                 </div>
                 <div className="text-right flex items-center space-x-2">
-                  <p className="text-sm text-gray-500">{formatDate(shoutout.created_at)}</p>
+                  <p className="text-sm text-gray-300">{formatDate(shoutout.created_at)}</p>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                    shoutout.category === 'teamwork' ? 'bg-blue-100 text-blue-700' :
-                    shoutout.category === 'innovation' ? 'bg-green-100 text-green-700' :
-                    shoutout.category === 'leadership' ? 'bg-purple-100 text-purple-700' :
-                    shoutout.category === 'customer_service' ? 'bg-orange-100 text-orange-700' :
-                    shoutout.category === 'problem_solving' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-700'
+                    shoutout.category === 'teamwork' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                    shoutout.category === 'innovation' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                    shoutout.category === 'leadership' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                    shoutout.category === 'customer_service' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' :
+                    shoutout.category === 'problem_solving' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                    'bg-gray-500/20 text-gray-300 border border-gray-500/30'
                   }`}>
                     {shoutout.category.replace('_', ' ')}
                   </span>
@@ -265,7 +265,7 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
                     <button
                       onClick={() => handleDeleteShoutOut(shoutout.id)}
                       disabled={deletingId === shoutout.id}
-                      className="text-red-500 hover:text-red-700 disabled:opacity-50 p-1"
+                      className="text-red-500 hover:text-red-700 disabled:opacity-50 p-1 transition-all duration-200 hover:scale-110 hover:bg-red-50 rounded"
                       title="Delete shout-out (Admin only)"
                     >
                       {deletingId === shoutout.id ? (
@@ -282,18 +282,14 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
                 </div>
               </div>
 
-              {shoutout.title && (
-                <h4 className="text-lg font-semibold text-gray-800 mb-2">{shoutout.title}</h4>
-              )}
-
-              <p className="text-gray-700 mb-4 whitespace-pre-wrap">{shoutout.message}</p>
+              <p className="text-gray-100 mb-4 whitespace-pre-wrap">{shoutout.message}</p>
 
               {shoutout.image_url && (
                 <div className="mb-4">
                   <img
                     src={`http://127.0.0.1:8000${shoutout.image_url}`}
                     alt="Shout-out attachment"
-                    className="w-32 h-32 object-cover rounded-lg shadow-md border border-gray-200"
+                    className="w-32 h-32 object-cover rounded-lg shadow-md border border-gray-200 hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
                     onError={(e) => {
                       e.target.style.display = 'none'
                     }}
@@ -323,11 +319,11 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
                         key={type}
                         onClick={() => handleReaction(shoutout.id, type)}
                         disabled={reactingTo === shoutout.id}
-                        className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm transition-all ${
+                        className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm transition-all duration-200 hover:scale-105 hover:shadow-md ${
                           userReacted
                             ? 'bg-blue-100 text-blue-700 border border-blue-200'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
-                        } ${reactingTo === shoutout.id ? 'opacity-50' : ''}`}
+                        } ${reactingTo === shoutout.id ? 'opacity-50 animate-pulse' : ''}`}
                         title={label}
                       >
                         <span>{emoji}</span>
@@ -338,13 +334,13 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm text-gray-500">
+              <div className="flex items-center justify-between text-sm text-gray-300">
                 <div className="flex items-center space-x-4">
                   <span>To: {shoutout.receiver_name} ({shoutout.receiver_department})</span>
                   <span className={`px-2 py-1 rounded-full text-xs ${
-                    shoutout.is_public === 'public' ? 'bg-green-100 text-green-700' :
-                    shoutout.is_public === 'department_only' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
+                    shoutout.is_public === 'public' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                    shoutout.is_public === 'department_only' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                    'bg-red-500/20 text-red-300 border border-red-500/30'
                   }`}>
                     {shoutout.is_public === 'public' ? 'Public' :
                      shoutout.is_public === 'department_only' ? 'Department Only' : 'Private'}
@@ -368,7 +364,7 @@ const ShoutOutFeed = ({ selectedDepartment, user, setActiveView }) => {
           <p className="text-gray-600 mb-6">
             Be the first to spread some positivity! Create a shout-out to appreciate your colleagues.
           </p>
-          <button onClick={() => setActiveView('create')} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
+          <button onClick={() => setActiveView('create')} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105 animate-bounce">
             Create Your First Shout-Out
           </button>
         </div>
@@ -502,10 +498,10 @@ const CreateShoutOut = ({ user }) => {
         </h2>
 
         {error ? (
-          <div className="mb-4 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{typeof error === 'string' ? error : JSON.stringify(error)}</div>
+          <div className="mb-4 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2 animate-fadeIn">{typeof error === 'string' ? error : JSON.stringify(error)}</div>
         ) : null}
         {success ? (
-          <div className="mb-4 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</div>
+          <div className="mb-4 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2 animate-fadeIn">{success}</div>
         ) : null}
 
         <form onSubmit={onSubmit} className="space-y-5">
@@ -535,7 +531,7 @@ const CreateShoutOut = ({ user }) => {
                   <button
                     type="button"
                     onClick={removeImage}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-all duration-200 hover:scale-110 hover:shadow-lg"
                   >
                     ×
                   </button>
@@ -574,7 +570,7 @@ const CreateShoutOut = ({ user }) => {
               <div className="text-sm font-medium text-gray-700 mb-2">Search Results</div>
               <div className="max-h-40 overflow-auto divide-y">
                 {results.map(u => (
-                  <button key={u.id} type="button" onClick={()=>addRecipient(u)} className="w-full text-left px-2 py-2 hover:bg-gray-50">
+                  <button key={u.id} type="button" onClick={()=>addRecipient(u)} className="w-full text-left px-2 py-2 hover:bg-gray-50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm hover:bg-indigo-50">
                     {u.name} <span className="text-gray-500 text-xs">({u.department})</span>
                   </button>
                 ))}
@@ -585,9 +581,9 @@ const CreateShoutOut = ({ user }) => {
               <div className="text-sm font-medium text-gray-700 mb-2">Selected Recipients</div>
               <div className="flex flex-wrap gap-2">
                 {selected.map(u => (
-                  <span key={u.id} className="inline-flex items-center bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm">
+                  <span key={u.id} className="inline-flex items-center bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm transition-all duration-200 hover:scale-105 hover:bg-indigo-200">
                     {u.name}
-                    <button type="button" onClick={()=>removeRecipient(u.id)} className="ml-2 text-indigo-600 hover:text-indigo-800">×</button>
+                    <button type="button" onClick={()=>removeRecipient(u.id)} className="ml-2 text-indigo-600 hover:text-indigo-800 transition-all duration-200 hover:scale-110 hover:bg-indigo-300 rounded-full w-4 h-4 flex items-center justify-center">×</button>
                   </span>
                 ))}
                 {!selected.length && <div className="text-gray-500 text-sm">No recipients selected</div>}
@@ -596,9 +592,9 @@ const CreateShoutOut = ({ user }) => {
           </div>
 
           <div>
-            <button disabled={!canSubmit || submitting || uploadingImage} className="bg-gradient-to-r from-indigo-500 to-purple-600 disabled:opacity-50 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
-              {uploadingImage ? 'Uploading Image...' : submitting ? 'Submitting...' : 'Create Shout-Out'}
-            </button>
+          <button disabled={!canSubmit || submitting || uploadingImage} className="bg-gradient-to-r from-indigo-500 to-purple-600 disabled:opacity-50 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105 disabled:hover:scale-100 disabled:animate-none">
+            {uploadingImage ? 'Uploading Image...' : submitting ? 'Submitting...' : 'Create Shout-Out'}
+          </button>
           </div>
         </form>
       </div>
