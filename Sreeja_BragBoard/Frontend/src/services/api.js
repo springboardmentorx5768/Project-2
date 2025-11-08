@@ -1,5 +1,5 @@
 // API service for BragBoard
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 class ApiService {
   // Helper method for authenticated requests
@@ -168,8 +168,24 @@ class ApiService {
     return this.authenticatedRequest(`/shoutouts/my-shoutouts?${params}`);
   }
 
+  async deleteShoutout(shoutoutId) {
+    return this.authenticatedRequest(`/shoutouts/${shoutoutId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getDepartmentStats() {
     return this.authenticatedRequest('/shoutouts/departments/stats');
+  }
+
+  async getMyStats() {
+    return this.authenticatedRequest('/shoutouts/my-stats', {
+      method: 'GET'
+    });
+  }
+
+  async getLeaderboard(limit = 10) {
+    return this.authenticatedRequest(`/shoutouts/leaderboard?limit=${limit}`);
   }
 
   async searchUsers(department = '', search = '') {
@@ -180,6 +196,22 @@ class ApiService {
     return this.authenticatedRequest(`/users/list?${params}`);
   }
 
+  async getAllUsers() {
+    return this.authenticatedRequest('/users/all');
+  }
+
+  async deleteUser(userId) {
+    return this.authenticatedRequest(`/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteMyAccount() {
+    return this.authenticatedRequest('/users/me/delete', {
+      method: 'DELETE',
+    });
+  }
+
   async checkHealth() {
     try {
       const response = await fetch(`${API_BASE_URL}/health`);
@@ -187,6 +219,69 @@ class ApiService {
     } catch (error) {
       throw new Error('Cannot connect to server');
     }
+  }
+
+  // Activity Log methods
+  async getActivityLog(limit = 100) {
+    return this.authenticatedRequest(`/api/activity/logs?limit=${limit}`);
+  }
+
+  async logActivity(actionType, details = '') {
+    return this.authenticatedRequest('/api/activity/log', {
+      method: 'POST',
+      body: JSON.stringify({ action_type: actionType, details }),
+    });
+  }
+
+  // Get all shoutouts for analytics
+  async getShoutouts() {
+    return this.authenticatedRequest('/shoutouts/feed?limit=1000');
+  }
+
+  // Reaction methods
+  async addReaction(shoutoutId, reactionType) {
+    return this.authenticatedRequest('/reactions/', {
+      method: 'POST',
+      body: JSON.stringify({
+        shoutout_id: shoutoutId,
+        reaction_type: reactionType
+      }),
+    });
+  }
+
+  async removeReaction(shoutoutId) {
+    return this.authenticatedRequest(`/reactions/${shoutoutId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getReactionSummary(shoutoutId) {
+    return this.authenticatedRequest(`/reactions/${shoutoutId}/summary`);
+  }
+
+  async getReactionUsers(shoutoutId) {
+    return this.authenticatedRequest(`/reactions/${shoutoutId}/users`);
+  }
+
+  // Comment methods
+  async addComment(shoutoutId, commentText) {
+    return this.authenticatedRequest('/comments/', {
+      method: 'POST',
+      body: JSON.stringify({
+        shoutout_id: shoutoutId,
+        comment_text: commentText
+      }),
+    });
+  }
+
+  async getComments(shoutoutId) {
+    return this.authenticatedRequest(`/comments/${shoutoutId}`);
+  }
+
+  async deleteComment(commentId) {
+    return this.authenticatedRequest(`/comments/${commentId}`, {
+      method: 'DELETE',
+    });
   }
 
 

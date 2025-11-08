@@ -8,6 +8,7 @@ const Login = ({ onSuccess, onToggleMode }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
     setFormData({
@@ -28,6 +29,8 @@ const Login = ({ onSuccess, onToggleMode }) => {
       localStorage.setItem('access_token', loginResponse.access_token);
       localStorage.setItem('refresh_token', loginResponse.refresh_token);
       
+      setSuccess('✅ Login successful! Redirecting...');
+      
       // Then, fetch user profile data
       const userProfile = await apiService.getUserProfile();
       
@@ -37,7 +40,9 @@ const Login = ({ onSuccess, onToggleMode }) => {
         ...userProfile
       };
       
-      onSuccess(userData);
+      setTimeout(() => {
+        onSuccess(userData);
+      }, 1000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -65,8 +70,14 @@ const Login = ({ onSuccess, onToggleMode }) => {
         
           <form className="space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 animate-fadeInUp">
               <div className="text-sm text-red-700">{error}</div>
+            </div>
+          )}
+          
+          {success && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 animate-fadeInUp">
+              <div className="text-sm text-emerald-700 font-medium">{success}</div>
             </div>
           )}
           

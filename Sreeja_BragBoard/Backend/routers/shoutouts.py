@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from pydantic import BaseModel
@@ -8,10 +8,27 @@ import shutil
 import os
 from pathlib import Path
 from database import get_db
-from models import ShoutOut, User
+from models import ShoutOut, User, ActivityLog, Reaction
 from auth import get_current_user
 
 router = APIRouter(prefix="/shoutouts", tags=["shoutouts"])
+
+# Helper function to log activities
+def log_activity(db: Session, user_id: int, action_type: str, details: str = "", ip_address: str = ""):
+    """Log activity to the database"""
+    try:
+        activity = ActivityLog(
+            user_id=user_id,
+            action_type=action_type,
+            details=details,
+            ip_address=ip_address,
+            created_at=datetime.utcnow()
+        )
+        db.add(activity)
+        db.commit()
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+        db.rollback()
 
 class ShoutOutCreate(BaseModel):
     title: str
@@ -33,6 +50,10 @@ class ShoutOutResponse(BaseModel):
     is_public: str
     created_at: datetime
     image_url: Optional[str] = None
+    like_count: int = 0
+    clap_count: int = 0
+    star_count: int = 0
+    user_reaction: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -46,6 +67,7 @@ class DepartmentStats(BaseModel):
 @router.post("/create", response_model=ShoutOutResponse)
 def create_shoutout(
     shoutout: ShoutOutCreate, 
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -70,6 +92,16 @@ def create_shoutout(
     db.add(new_shoutout)
     db.commit()
     db.refresh(new_shoutout)
+    
+    # Log activity
+    ip_address = request.client.host if request and request.client else ""
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        action_type="shoutout_created",
+        details=f"{receiver.name}",
+        ip_address=ip_address
+    )
     
     return ShoutOutResponse(
         id=new_shoutout.id,
@@ -176,6 +208,28 @@ def get_shoutouts_feed(
         giver = db.query(User).filter(User.id == shoutout.giver_id).first()
         receiver = db.query(User).filter(User.id == shoutout.receiver_id).first()
         
+        # Get reaction counts
+        like_count = db.query(Reaction).filter(
+            Reaction.shoutout_id == shoutout.id,
+            Reaction.reaction_type == 'like'
+        ).count()
+        
+        clap_count = db.query(Reaction).filter(
+            Reaction.shoutout_id == shoutout.id,
+            Reaction.reaction_type == 'clap'
+        ).count()
+        
+        star_count = db.query(Reaction).filter(
+            Reaction.shoutout_id == shoutout.id,
+            Reaction.reaction_type == 'star'
+        ).count()
+        
+        # Get current user's reaction
+        user_reaction = db.query(Reaction).filter(
+            Reaction.shoutout_id == shoutout.id,
+            Reaction.user_id == current_user.id
+        ).first()
+        
         result.append(ShoutOutResponse(
             id=shoutout.id,
             title=shoutout.title,
@@ -186,7 +240,12 @@ def get_shoutouts_feed(
             receiver_department=shoutout.receiver_department,
             category=shoutout.category,
             is_public=shoutout.is_public,
-            created_at=shoutout.created_at
+            created_at=shoutout.created_at,
+            image_url=shoutout.image_url,
+            like_count=like_count,
+            clap_count=clap_count,
+            star_count=star_count,
+            user_reaction=user_reaction.reaction_type if user_reaction else None
         ))
     
     return result
@@ -273,6 +332,92 @@ def get_department_stats(
     
     return sorted(stats, key=lambda x: x.total_shoutouts, reverse=True)
 
+@router.get("/my-stats")
+def get_my_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user's shoutout statistics"""
+    
+    print(f"🔍 Getting stats for user: {current_user.name} (ID: {current_user.id})")
+    
+    # Total shoutouts given by THIS user
+    given = db.query(ShoutOut).filter(ShoutOut.giver_id == current_user.id).count()
+    print(f"📤 Shoutouts given by this user: {given}")
+    
+    # Total shoutouts received by THIS user
+    received = db.query(ShoutOut).filter(ShoutOut.receiver_id == current_user.id).count()
+    print(f"📥 Shoutouts received by this user: {received}")
+    
+    # TOTAL SHOUTOUTS IN ENTIRE SYSTEM (regardless of user)
+    total_shoutouts_in_system = db.query(ShoutOut).count()
+    print(f"📊 TOTAL shoutouts in entire system: {total_shoutouts_in_system}")
+    
+    result = {
+        "total_shoutouts": total_shoutouts_in_system,  # Changed: Now shows ALL shoutouts
+        "given": given,
+        "received": received
+    }
+    print(f"✅ Returning stats: {result}")
+    
+    return result
+
+@router.get("/leaderboard")
+def get_leaderboard(
+    limit: int = Query(10, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get top contributors leaderboard"""
+    from sqlalchemy import func
+    
+    # Get users with most shoutouts given
+    top_givers = db.query(
+        User.id,
+        User.name,
+        User.department,
+        func.count(ShoutOut.id).label('count')
+    ).join(ShoutOut, User.id == ShoutOut.giver_id)\
+     .group_by(User.id, User.name, User.department)\
+     .order_by(func.count(ShoutOut.id).desc())\
+     .limit(limit)\
+     .all()
+    
+    # Get users with most shoutouts received
+    top_receivers = db.query(
+        User.id,
+        User.name,
+        User.department,
+        func.count(ShoutOut.id).label('count')
+    ).join(ShoutOut, User.id == ShoutOut.receiver_id)\
+     .group_by(User.id, User.name, User.department)\
+     .order_by(func.count(ShoutOut.id).desc())\
+     .limit(limit)\
+     .all()
+    
+    return {
+        "top_givers": [
+            {
+                "id": user.id,
+                "name": user.name,
+                "department": user.department,
+                "count": user.count,
+                "rank": idx + 1
+            }
+            for idx, user in enumerate(top_givers)
+        ],
+        "top_receivers": [
+            {
+                "id": user.id,
+                "name": user.name,
+                "department": user.department,
+                "count": user.count,
+                "rank": idx + 1
+            }
+            for idx, user in enumerate(top_receivers)
+        ]
+    }
+
 @router.get("/users/search")
 def search_users_by_department(
     department: Optional[str] = Query(None),
@@ -301,3 +446,36 @@ def search_users_by_department(
         }
         for user in users
     ]
+
+@router.delete("/{shoutout_id}")
+def delete_shoutout(
+    shoutout_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a shoutout (only the creator can delete)"""
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shoutout not found")
+    
+    # Only allow the giver or admin to delete
+    if shoutout.giver_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="You don't have permission to delete this shoutout")
+    
+    db.delete(shoutout)
+    db.commit()
+    
+    # Log activity
+    ip_address = request.client.host if request and request.client else ""
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        action_type="shoutout_deleted",
+        details=f"Deleted shoutout #{shoutout_id}",
+        ip_address=ip_address
+    )
+    
+    return {"message": "Shoutout deleted successfully"}
+

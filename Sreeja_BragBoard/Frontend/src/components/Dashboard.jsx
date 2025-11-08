@@ -5,7 +5,7 @@ import MainContent from './MainContent'
 
 const Dashboard = ({ user, onLogout }) => {
   const [selectedDepartment, setSelectedDepartment] = useState('all')
-  const [activeView, setActiveView] = useState('feed')
+  const [activeView, setActiveView] = useState('dashboard')
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -20,11 +20,13 @@ const Dashboard = ({ user, onLogout }) => {
           selectedDepartment={selectedDepartment}
           setSelectedDepartment={setSelectedDepartment}
           userDepartment={user?.department}
+          userRole={user?.role}
         />
         
         {/* Main Content */}
         <MainContent 
           activeView={activeView}
+          setActiveView={setActiveView}
           selectedDepartment={selectedDepartment}
           user={user}
         />
