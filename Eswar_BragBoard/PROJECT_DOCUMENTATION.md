@@ -1,7 +1,7 @@
 # BragBoard Project - Complete Documentation Report
 
 ### Project Description
-BragBoard is a comprehensive full-stack web application designed as an employee recognition and shout-out platform. It enables users to give and receive appreciation messages (shout-outs) within their organization, with features like department-based filtering, multi-recipient shout-outs, visibility controls, and analytics. The application features secure JWT-based authentication, role-based access control, and a modern responsive interface built with industry-standard technologies.
+BragBoard is a comprehensive full-stack web application designed as an employee recognition and shout-out platform. It enables users to give and receive appreciation messages (shout-outs) within their organization, with advanced features including department-based filtering, multi-recipient shout-outs, visibility controls, reactions, comments, reporting system, and comprehensive analytics. The application features secure JWT-based authentication, role-based access control, and a modern responsive interface built with industry-standard technologies.
 
 ---
 
@@ -40,7 +40,7 @@ BragBoard is a comprehensive full-stack web application designed as an employee 
 BragBoard/
 ├── Backend/                    # FastAPI Backend Application
 │   ├── main.py                # Application entry point with CORS and routing
-│   ├── models.py              # SQLAlchemy database models (User, ShoutOut, ShoutOutRecipient)
+│   ├── models.py              # SQLAlchemy database models (User, ShoutOut, ShoutOutRecipient, ShoutOutReaction, Comment, Report)
 │   ├── database.py            # PostgreSQL database configuration and connection
 │   ├── auth.py                # JWT authentication and password hashing logic
 │   ├── config.py              # Environment configuration and settings
@@ -48,10 +48,12 @@ BragBoard/
 │   ├── .env                   # Environment variables (database URL, secrets)
 │   ├── POSTGRESQL_SETUP.md    # Database setup and migration guide
 │   ├── check_db.py            # Database connection verification script
+│   ├── check_reports.py       # Report data verification script
+│   ├── migrate_db.py          # Database migration utility
 │   ├── view_data.py           # Database data viewing utility
 │   └── routers/               # API route modules
 │       ├── users.py           # User registration, login, and profile endpoints
-│       └── shoutouts.py       # Shout-out creation, feed, and analytics endpoints
+│       └── shoutouts.py       # Shout-out creation, feed, reactions, comments, reports, and analytics endpoints
 ├── Frontend/                   # React Frontend Application
 │   ├── src/                   # Source code
 │   │   ├── App.jsx            # Main application component with auth state
@@ -63,7 +65,7 @@ BragBoard/
 │   │   │   ├── Dashboard.jsx  # Main dashboard layout
 │   │   │   ├── Header.jsx     # Top navigation header
 │   │   │   ├── Sidebar.jsx    # Navigation sidebar with department filters
-│   │   │   ├── MainContent.jsx # Main content area with views
+│   │   │   ├── MainContent.jsx # Main content area with views (feed, create, my-shoutouts, analytics)
 │   │   │   ├── Register.jsx   # User registration form
 │   │   │   └── Login.jsx      # User login form
 │   │   └── services/          # API service layer
@@ -77,69 +79,10 @@ BragBoard/
 │   ├── eslint.config.js       # ESLint configuration
 │   └── README.md              # Frontend README
 ├── .gitignore                 # Git ignore rules for both frontend and backend
+├── package.json               # Root package.json for frontend dependencies
+├── TODO.md                    # Project task tracking
 └── PROJECT_DOCUMENTATION.md   # This comprehensive documentation
-
 ```
-                                      Infosys Springboard Internship - Week 5
-Task Assigned
-● Add reactions (like, clap, star) to posts
-● Reaction counters + user-specific reaction tracking
-
-Project Description
-
-BragBoard continues to evolve as a full-stack achievement-sharing platform for employees.
-This week focused on enhancing engagement features by introducing reactions to posts.
-The goal was to allow users to express appreciation through interactive reaction options, track individual user responses, and record total counts per post.
-
-Steps I Followed
-
-● Designed and structured reaction icons (Like, Clap, Star) UI on post cards.
-● Built reaction API endpoints to add and remove user reactions.
-● Implemented database schema to track reactions per user and per post.
-● Added reaction counters to show total Likes, Claps, and Stars on each post.
-● Developed logic to prevent duplicate reactions by the same user on the same post.
-● Integrated toggling system so users can remove a previously added reaction.
-● Synced frontend state with backend reaction records using JWT authentication.
-● Implemented real-time UI updates after reacting, using API state management.
-
-📁 Project Structure
-Backend
-
-● Created Reaction model storing post ID, user ID, and reaction type.
-● Built secure FastAPI endpoints for reaction add/remove with authentication.
-● Added controller logic to check user-existing reaction before insertion.
-● Aggregated reaction counts using efficient database queries.
-● Optimized API response to return post reaction summary + user’s reaction type.
-
-Frontend
-
-● Added interactive reaction buttons to each post UI.
-● Displayed real-time reaction count updates on button click.
-● Highlighted the selected reaction for logged-in users.
-● Ensured proper token-based auth before reacting.
-● Handled optimistic UI updates for smooth user experience.
-
-Learnings
-
-● Gained experience building reaction-based UX logic like modern social apps.
-● Learned schema design for many-to-many relations (users ↔ posts via reactions).
-● Improved backend query optimization for aggregate reaction counts.
-● Strengthened React state management for real-time UI refresh.
-● Practiced conditional button rendering and active-state UI logic.
-● Understood strategies to prevent duplicate record insertion in DB.
-
-Errors & Fixes
-Issue	Fix
-Reaction buttons were not updating instantly	Implemented state sync + re-fetch mechanism
-Duplicate reactions created in database	Added backend validation to block duplicates
-Reaction highlight not showing for existing user reactions	Fixed by fetching and mapping user-specific reaction data on post load
-Slow response on rapid multiple reaction clicks	Added debounce logic + disabled repeat clicking temporarily
-Outcomes
-
-● Fully functional reaction system with 3 reaction types.
-● Post cards now show live reaction counters.
-● Users can react only once per type and toggle reactions smoothly.
-● Improved social-interaction experience on BragBoard.
 ---
 
 ## 🏗️ Development Process & Implementation
@@ -220,6 +163,61 @@ class ShoutOutRecipient(Base):
     recipient = relationship("User", back_populates="shoutout_recipient_links")
 ```
 
+**ShoutOutReaction Model (for user reactions):**
+```python
+class ShoutOutReaction(Base):
+    __tablename__ = "shoutout_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reaction_type = Column(String, nullable=False)  # e.g., 'thumbs_up', 'heart', 'clap', 'celebrate', 'insightful', 'support'
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    shoutout = relationship("ShoutOut", back_populates="reactions")
+    user = relationship("User", back_populates="reactions")
+
+    # Ensure one reaction per user per shoutout (users can only have one reaction per shoutout)
+    __table_args__ = (
+        UniqueConstraint('shoutout_id', 'user_id', name='unique_user_shoutout_reaction'),
+    )
+```
+
+**Comment Model (for shout-out comments):**
+```python
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    comment_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    shoutout = relationship("ShoutOut", back_populates="comments")
+    user = relationship("User", back_populates="comments")
+```
+
+**Report Model (for content moderation):**
+```python
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(String, nullable=False)  # e.g., 'inappropriate_content', 'spam', 'harassment', 'offensive_language', 'other'
+    status = Column(Enum("pending", "resolved", name="report_status"), default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    shoutout = relationship("ShoutOut")
+    reporter = relationship("User")
+```
+
 #### 2.2 Authentication System
 **JWT Implementation:**
 - Secure password hashing using bcrypt with pbkdf2_sha256
@@ -247,6 +245,18 @@ class ShoutOutRecipient(Base):
 - `GET /shoutouts/my-shoutouts` - Get user's given/received shout-outs
 - `GET /shoutouts/departments/stats` - Get department statistics
 - `GET /shoutouts/users/search` - Search users for shout-out creation
+- `POST /shoutouts/{id}/react` - Add/remove reaction to shout-out
+- `GET /shoutouts/{id}/reactions` - Get reactions for a shout-out
+- `POST /shoutouts/{id}/comments` - Add comment to shout-out
+- `GET /shoutouts/{id}/comments` - Get comments for a shout-out
+- `DELETE /shoutouts/comments/{id}` - Delete comment (admin or author only)
+- `POST /shoutouts/{id}/report` - Report inappropriate shout-out
+- `GET /shoutouts/admin/reports` - Get all reports (admin only)
+- `PUT /shoutouts/admin/reports/{id}/resolve` - Resolve report (admin only)
+- `GET /shoutouts/admin/analytics/top-contributors` - Get top contributors (admin only)
+- `GET /shoutouts/admin/analytics/most-tagged` - Get most tagged users (admin only)
+- `DELETE /shoutouts/{id}` - Delete shout-out (admin only)
+- `POST /shoutouts/upload-image` - Upload image for shout-out
 
 **Health Check Endpoints:**
 - `GET /` - Basic API status
@@ -390,7 +400,21 @@ export default new ApiService();
 - Remember me functionality
 - Logout with token invalidation
 
-### 2. Database Management
+### 2. Shout-Out Management System
+**Core Features:**
+- Single and multi-recipient shout-outs
+- Department-based visibility controls (public, department_only, private)
+- Category classification (teamwork, innovation, leadership, etc.)
+- Image attachment support with file upload
+- Real-time feed with filtering options
+
+**Advanced Features:**
+- Reaction system with 6 reaction types (thumbs_up, heart, clap, celebrate, insightful, support)
+- Comment system for engagement
+- Content moderation with reporting system
+- Admin analytics and management tools
+
+### 3. Database Management
 **PostgreSQL Integration:**
 - Connection pooling for performance
 - Transaction management
@@ -404,7 +428,7 @@ export default new ApiService();
 - Index optimization for query performance
 - Data validation at database level
 
-### 3. Modern Web Interface
+### 4. Modern Web Interface
 **Responsive Design:**
 - Mobile-first approach
 - Tablet and desktop optimization
@@ -418,7 +442,7 @@ export default new ApiService();
 - Error messaging and recovery
 - Success confirmations
 
-### 4. API Architecture
+### 5. API Architecture
 **RESTful Design:**
 - Standard HTTP methods (GET, POST, PUT, DELETE)
 - Consistent response formats
@@ -496,6 +520,42 @@ CREATE TABLE shoutout_recipients (
 );
 ```
 
+### ShoutOut Reactions Table (for user reactions)
+```sql
+CREATE TABLE shoutout_reactions (
+    id SERIAL PRIMARY KEY,
+    shoutout_id INTEGER NOT NULL REFERENCES shoutouts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    reaction_type VARCHAR NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(shoutout_id, user_id)
+);
+```
+
+### Comments Table (for shout-out comments)
+```sql
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    shoutout_id INTEGER NOT NULL REFERENCES shoutouts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    comment_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Reports Table (for content moderation)
+```sql
+CREATE TABLE reports (
+    id SERIAL PRIMARY KEY,
+    shoutout_id INTEGER NOT NULL REFERENCES shoutouts(id),
+    reporter_id INTEGER NOT NULL REFERENCES users(id),
+    reason VARCHAR NOT NULL,
+    status VARCHAR DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP NULL
+);
+```
+
 **Field Descriptions:**
 - **Users Table:**
   - `id`: Auto-incrementing primary key
@@ -516,12 +576,37 @@ CREATE TABLE shoutout_recipients (
   - `receiver_department`: Department of the primary recipient
   - `category`: Shout-out category (teamwork, innovation, etc.)
   - `is_public`: Visibility level (public, department_only, private)
+  - `image_url`: Optional URL to attached image
   - `created_at`: Timestamp of creation
 
 - **ShoutOut Recipients Table:**
   - `id`: Auto-incrementing primary key
   - `shoutout_id`: Foreign key to shoutout
   - `recipient_id`: Foreign key to additional recipient
+
+- **ShoutOut Reactions Table:**
+  - `id`: Auto-incrementing primary key
+  - `shoutout_id`: Foreign key to shoutout
+  - `user_id`: Foreign key to user who reacted
+  - `reaction_type`: Type of reaction (thumbs_up, heart, clap, etc.)
+  - `created_at`: Timestamp of reaction
+  - `UNIQUE(shoutout_id, user_id)`: Ensures one reaction per user per shoutout
+
+- **Comments Table:**
+  - `id`: Auto-incrementing primary key
+  - `shoutout_id`: Foreign key to shoutout
+  - `user_id`: Foreign key to user who commented
+  - `comment_text`: The comment content
+  - `created_at`: Timestamp of comment
+
+- **Reports Table:**
+  - `id`: Auto-incrementing primary key
+  - `shoutout_id`: Foreign key to reported shoutout
+  - `reporter_id`: Foreign key to user who reported
+  - `reason`: Reason for reporting (inappropriate_content, spam, etc.)
+  - `status`: Report status (pending, resolved)
+  - `created_at`: Timestamp when report was created
+  - `resolved_at`: Timestamp when report was resolved (nullable)
 
 ---
 
@@ -613,31 +698,37 @@ CREATE TABLE shoutout_recipients (
 ## 📚 Learning Outcomes
 
 ### Technical Skills Developed
-1. **Full-Stack Development:** End-to-end application development
-2. **Modern Frameworks:** React.js and FastAPI proficiency
-3. **Database Management:** PostgreSQL and ORM usage
-4. **Authentication:** JWT and security implementation
-5. **API Design:** RESTful API development
-6. **Responsive Design:** Mobile-first web development
+1. **Full-Stack Development:** End-to-end application development with complex features
+2. **Modern Frameworks:** React.js and FastAPI proficiency with advanced patterns
+3. **Database Management:** PostgreSQL and SQLAlchemy ORM with complex relationships
+4. **Authentication:** JWT and security implementation with role-based access control
+5. **API Design:** RESTful API development with comprehensive endpoints
+6. **Responsive Design:** Mobile-first web development with modern UI/UX
+7. **Advanced Features:** Reaction systems, commenting, content moderation, analytics
+8. **File Upload:** Image handling and storage with FastAPI
+9. **Data Modeling:** Complex database schema design with constraints and relationships
 
 ### Professional Skills Gained
-1. **Project Management:** Planning and execution
-2. **Version Control:** Git workflow and collaboration
-3. **Documentation:** Technical writing and documentation
-4. **Problem Solving:** Debugging and troubleshooting
-5. **Code Quality:** Best practices and standards
+1. **Project Management:** Planning, execution, and iterative development
+2. **Version Control:** Git workflow and collaborative development practices
+3. **Documentation:** Comprehensive technical writing and project documentation
+4. **Problem Solving:** Advanced debugging and troubleshooting of complex systems
+5. **Code Quality:** Industry best practices and standards implementation
+6. **Feature Development:** End-to-end feature implementation from backend to frontend
+7. **Database Design:** Complex schema design and optimization
+8. **API Development:** RESTful API design with comprehensive functionality
 
 ---
 
 ## 📋 Project Statistics
 
 ### Development Metrics
-- **Total Development Time:** 4 weeks
-- **Lines of Code:** 2,500+ lines
-- **Files Created:** 30+ files
+- **Total Development Time:** 5 weeks
+- **Lines of Code:** 4,000+ lines
+- **Files Created:** 35+ files
 - **Components Developed:** 15+ React components
-- **API Endpoints:** 10+ RESTful endpoints
-- **Database Tables:** 3 tables (users, shoutouts, shoutout_recipients)
+- **API Endpoints:** 20+ RESTful endpoints
+- **Database Tables:** 6 tables (users, shoutouts, shoutout_recipients, shoutout_reactions, comments, reports)
 
 ### Technology Integration
 - **Frontend Dependencies:** 15+ packages
@@ -645,6 +736,9 @@ CREATE TABLE shoutout_recipients (
 - **Security Features:** 5+ implementations
 - **Responsive Breakpoints:** 4 screen sizes
 - **Browser Compatibility:** Modern browsers
+- **Database Tables:** 6 comprehensive tables with relationships
+- **API Endpoints:** 20+ endpoints with full CRUD operations
+- **File Upload Support:** Image handling with secure storage
 
 ---
 
@@ -653,28 +747,33 @@ CREATE TABLE shoutout_recipients (
 The BragBoard project successfully demonstrates comprehensive full-stack web development skills using modern technologies and industry best practices. The implementation showcases:
 
 ### Key Achievements
-1. **Complete Full-Stack Application:** Functional employee recognition platform with shout-outs
+1. **Complete Full-Stack Application:** Comprehensive employee recognition platform with shout-outs, reactions, comments, and moderation
 2. **Modern Technology Stack:** React.js 19.1.1, FastAPI 0.117.1, and PostgreSQL
-3. **Advanced Features:** Multi-recipient shout-outs, department filtering, visibility controls
-4. **Security Implementation:** JWT authentication, bcrypt password hashing, role-based access
+3. **Advanced Features:** Multi-recipient shout-outs, department filtering, visibility controls, reaction system, commenting, reporting, analytics
+4. **Security Implementation:** JWT authentication, bcrypt password hashing, role-based access control
 5. **Responsive Design:** Mobile-first, accessible user interface with Tailwind CSS
-6. **Production Readiness:** Scalable architecture, database connection pooling, error handling
+6. **Production Readiness:** Scalable architecture, database connection pooling, comprehensive error handling
 
 ### Technical Excellence
 - Clean, maintainable code architecture with modular design
 - Proper separation of concerns (frontend/backend/database layers)
-- Comprehensive error handling and validation
-- Security best practices (JWT, password hashing, input validation)
-- Performance optimization (database pooling, efficient queries)
+- Comprehensive error handling and validation across all features
+- Security best practices (JWT, password hashing, input validation, role-based access)
+- Performance optimization (database pooling, efficient queries, indexing)
 - Modern development practices (ESLint, type hints, responsive design)
+- Advanced features implementation (reactions, comments, reporting, analytics)
+- File upload and storage with proper validation
+- Complex database relationships and constraints
 
 ### Professional Development
 - Industry-standard development practices and best practices
 - Version control (Git) and collaborative development workflow
 - Technical documentation and communication skills
-- Problem-solving, debugging, and troubleshooting abilities
+- Problem-solving, debugging, and troubleshooting of complex systems
 - Project planning, time management, and iterative development
 - Full-stack development lifecycle from concept to deployment
+- Feature development from backend API to frontend UI
+- Database design and optimization for performance
 
 The BragBoard project provides a solid foundation for future enhancements and demonstrates readiness for professional software development environments.
 
