@@ -298,6 +298,201 @@ class ApiService {
       throw new Error(error.message || 'Network error during getting reactions');
     }
   }
+
+  async addComment(shoutoutId, commentText) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/${shoutoutId}/comments?comment_text=${encodeURIComponent(commentText)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to add comment');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during adding comment');
+    }
+  }
+
+  async getComments(shoutoutId) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/${shoutoutId}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to get comments');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during getting comments');
+    }
+  }
+
+  async deleteComment(commentId) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to delete comment');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during deleting comment');
+    }
+  }
+
+  async getTopContributors(limit = 10) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/admin/analytics/top-contributors?limit=${limit}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to get top contributors');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during getting top contributors');
+    }
+  }
+
+  async getMostTagged(limit = 10) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/admin/analytics/most-tagged?limit=${limit}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to get most tagged users');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during getting most tagged users');
+    }
+  }
+
+  async reportShoutOut(shoutoutId, reason) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/${parseInt(shoutoutId)}/report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to report shout-out');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during reporting shout-out');
+    }
+  }
+
+  async getReports(status = 'pending', skip = 0, limit = 50) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const params = new URLSearchParams();
+      params.append('status', status);
+      params.append('skip', skip.toString());
+      params.append('limit', limit.toString());
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/admin/reports?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to get reports');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during getting reports');
+    }
+  }
+
+  async resolveReport(reportId) {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No access token found');
+
+      const response = await fetch(`${API_BASE_URL}/shoutouts/admin/reports/${parseInt(reportId)}/resolve`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const msg = extractErrorMessage(errorData, 'Failed to resolve report');
+        throw new Error(msg);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || 'Network error during resolving report');
+    }
+  }
 }
 
 export default new ApiService();

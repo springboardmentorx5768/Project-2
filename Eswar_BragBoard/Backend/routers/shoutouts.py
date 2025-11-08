@@ -8,7 +8,7 @@ import os
 import shutil
 from pathlib import Path
 from database import get_db
-from models import ShoutOut, User, ShoutOutRecipient, ShoutOutReaction
+from models import ShoutOut, User, ShoutOutRecipient, ShoutOutReaction, Comment, Report
 from auth import get_current_user
 
 router = APIRouter(prefix="/shoutouts", tags=["shoutouts"])
@@ -520,3 +520,293 @@ def get_reactions(
             for reaction in reactions
         ]
     }
+
+@router.post("/{shoutout_id}/comments")
+def add_comment(
+    shoutout_id: int,
+    comment_text: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Add a comment to a shout-out"""
+
+    # Validate comment text
+    if not comment_text or not comment_text.strip():
+        raise HTTPException(status_code=400, detail="Comment text cannot be empty")
+
+    if len(comment_text.strip()) > 500:
+        raise HTTPException(status_code=400, detail="Comment text must be less than 500 characters")
+
+    # Check if shoutout exists
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shout-out not found")
+
+    # Create comment
+    new_comment = Comment(
+        shoutout_id=shoutout_id,
+        user_id=current_user.id,
+        comment_text=comment_text.strip()
+    )
+
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return {
+        "id": new_comment.id,
+        "comment_text": new_comment.comment_text,
+        "user_name": current_user.name,
+        "created_at": new_comment.created_at
+    }
+
+@router.get("/{shoutout_id}/comments")
+def get_comments(
+    shoutout_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all comments for a shout-out"""
+
+    # Check if shoutout exists
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shout-out not found")
+
+    # Get comments with user info
+    comments = db.query(Comment, User.name).join(User, Comment.user_id == User.id).filter(
+        Comment.shoutout_id == shoutout_id
+    ).order_by(Comment.created_at.asc()).all()
+
+    return {
+        "comments": [
+            {
+                "id": comment.id,
+                "comment_text": comment.comment_text,
+                "user_name": user_name,
+                "created_at": comment.created_at,
+                "can_delete": current_user.role == "admin" or comment.user_id == current_user.id
+            }
+            for comment, user_name in comments
+        ]
+    }
+
+@router.delete("/comments/{comment_id}")
+def delete_comment(
+    comment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a comment (admin or comment author only)"""
+
+    # Find the comment
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    # Check permissions
+    if current_user.role != "admin" and comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete your own comments")
+
+    # Delete the comment
+    db.delete(comment)
+    db.commit()
+
+    return {"message": "Comment deleted successfully"}
+
+@router.get("/admin/analytics/top-contributors")
+def get_top_contributors(
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get top contributors (users who gave the most shout-outs) - Admin only"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Get users with most shout-outs given
+    contributors = db.query(
+        User.name,
+        User.department,
+        func.count(ShoutOut.id).label('shoutouts_given')
+    ).join(ShoutOut, User.id == ShoutOut.giver_id).group_by(
+        User.id, User.name, User.department
+    ).order_by(func.count(ShoutOut.id).desc()).limit(limit).all()
+
+    return {
+        "top_contributors": [
+            {
+                "name": contributor.name,
+                "department": contributor.department,
+                "shoutouts_given": contributor.shoutouts_given
+            }
+            for contributor in contributors
+        ]
+    }
+
+@router.get("/admin/analytics/most-tagged")
+def get_most_tagged(
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get most tagged users (users who received the most shout-outs) - Admin only"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Get users with most shout-outs received (including multiple recipients)
+    # First, get counts from primary receiver field
+    primary_counts = db.query(
+        User.name,
+        User.department,
+        func.count(ShoutOut.id).label('count')
+    ).join(ShoutOut, User.id == ShoutOut.receiver_id).group_by(
+        User.id, User.name, User.department
+    ).all()
+
+    # Then, get counts from shoutout_recipients table for additional recipients
+    recipient_counts = db.query(
+        User.name,
+        User.department,
+        func.count(ShoutOutRecipient.id).label('count')
+    ).join(ShoutOutRecipient, User.id == ShoutOutRecipient.recipient_id).group_by(
+        User.id, User.name, User.department
+    ).all()
+
+    # Combine the counts
+    user_counts = {}
+    for name, department, count in primary_counts:
+        key = (name, department)
+        user_counts[key] = user_counts.get(key, 0) + count
+
+    for name, department, count in recipient_counts:
+        key = (name, department)
+        user_counts[key] = user_counts.get(key, 0) + count
+
+    # Sort by total count and limit
+    sorted_users = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+
+    return {
+        "most_tagged": [
+            {
+                "name": name,
+                "department": department,
+                "shoutouts_received": count
+            }
+            for (name, department), count in sorted_users
+        ]
+    }
+
+# Report endpoints
+class ReportCreate(BaseModel):
+    reason: str
+
+class ReportResponse(BaseModel):
+    id: int
+    shoutout_id: int
+    reporter_name: str
+    reason: str
+    status: str
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+    shoutout_message: str
+    shoutout_giver_name: str
+
+@router.post("/{shoutout_id}/report")
+def report_shoutout(
+    shoutout_id: int,
+    report: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Report a shout-out for inappropriate content"""
+
+    # Validate reason
+    valid_reasons = ['inappropriate_content', 'spam', 'harassment', 'offensive_language', 'other']
+    if report.reason not in valid_reasons:
+        raise HTTPException(status_code=400, detail=f"Invalid reason. Valid reasons: {', '.join(valid_reasons)}")
+
+    # Check if shoutout exists
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shout-out not found")
+
+    # Check if user already reported this shoutout
+    existing_report = db.query(Report).filter(
+        Report.shoutout_id == shoutout_id,
+        Report.reporter_id == current_user.id
+    ).first()
+    if existing_report:
+        raise HTTPException(status_code=400, detail="You have already reported this shout-out")
+
+    # Create report
+    new_report = Report(
+        shoutout_id=shoutout_id,
+        reporter_id=current_user.id,
+        reason=report.reason
+    )
+
+    db.add(new_report)
+    db.commit()
+    db.refresh(new_report)
+
+    return {"message": "Report submitted successfully"}
+
+@router.get("/admin/reports")
+def get_reports(
+    status: Optional[str] = Query("pending", description="Filter by status: pending, resolved, or all"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all reports - Admin only"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    query = db.query(Report).join(User, Report.reporter_id == User.id).join(ShoutOut, Report.shoutout_id == ShoutOut.shoutout.id)
+
+    if status and status != "all":
+        query = query.filter(Report.status == status)
+
+    reports = query.order_by(Report.created_at.desc()).offset(skip).limit(limit).all()
+
+    result = []
+    for report in reports:
+        giver = db.query(User).filter(User.id == report.shoutout.giver_id).first()
+        result.append(ReportResponse(
+            id=report.id,
+            shoutout_id=report.shoutout_id,
+            reporter_name=report.reporter.name,
+            reason=report.reason,
+            status=report.status,
+            created_at=report.created_at,
+            resolved_at=report.resolved_at,
+            shoutout_message=report.shoutout.message[:100] + "..." if len(report.shoutout.message) > 100 else report.shoutout.message,
+            shoutout_giver_name=giver.name if giver else "Unknown"
+        ))
+
+    return {"reports": result}
+
+@router.put("/admin/reports/{report_id}/resolve")
+def resolve_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Resolve a report - Admin only"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Find the report
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Update status
+    report.status = "resolved"
+    report.resolved_at = datetime.utcnow()
+
+    db.commit()
+
+    return {"message": "Report resolved successfully"}

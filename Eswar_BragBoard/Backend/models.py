@@ -21,6 +21,7 @@ class User(Base):
     received_shoutouts = relationship("ShoutOut", foreign_keys="ShoutOut.receiver_id", back_populates="receiver")
     shoutout_recipient_links = relationship("ShoutOutRecipient", back_populates="recipient")
     reactions = relationship("ShoutOutReaction", back_populates="user")
+    comments = relationship("Comment", back_populates="user")
 
 class ShoutOut(Base):
     __tablename__ = "shoutouts"
@@ -42,6 +43,7 @@ class ShoutOut(Base):
     receiver = relationship("User", foreign_keys=[receiver_id], back_populates="received_shoutouts")
     recipients = relationship("ShoutOutRecipient", back_populates="shoutout", cascade="all, delete-orphan")
     reactions = relationship("ShoutOutReaction", back_populates="shoutout", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="shoutout", cascade="all, delete-orphan")
 
 class ShoutOutRecipient(Base):
     __tablename__ = "shoutout_recipients"
@@ -70,4 +72,32 @@ class ShoutOutReaction(Base):
     __table_args__ = (
         UniqueConstraint('shoutout_id', 'user_id', name='unique_user_shoutout_reaction'),
     )
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    comment_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    shoutout = relationship("ShoutOut", back_populates="comments")
+    user = relationship("User", back_populates="comments")
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(String, nullable=False)  # e.g., 'inappropriate_content', 'spam', 'harassment', 'offensive_language'
+    status = Column(Enum("pending", "resolved", name="report_status"), default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    shoutout = relationship("ShoutOut")
+    reporter = relationship("User")
 
