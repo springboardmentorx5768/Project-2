@@ -1,4 +1,5 @@
 # main.py
+# main.py
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,18 @@ from schemas import CommentCreate, CommentResponse
 from schemas import UpdateProfileRequest
 from schemas import ReactionResponse  # kept import (safe)
 import aiofiles
+from fastapi import status 
+from models import Report
+from fastapi.responses import Response
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import csv
+from io import StringIO, BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+
 
 import models, schemas, auth
 from database import engine, Base, get_db
@@ -28,18 +41,10 @@ from dotenv import load_dotenv
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
 
-
-# Create DB tables (if not exist)
-Base.metadata.create_all(bind=engine)
+# ---------------- Setup ----------------
 
 app = FastAPI(title="BragBoard API")
 
-# Serve uploads folder
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-
-# CORS: allow from dev frontends
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
@@ -48,9 +53,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Base.metadata.create_all(bind=engine)
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
-
 
 # ---------------- Helper ----------------
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -58,34 +70,20 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
     )
     try:
-        # Helpful debug logs on server console
-
         payload = decode_token(token)
-        
         user_id = payload.get("sub")
         if user_id is None:
-            print("❌ [DEBUG] No 'sub' in payload")
             raise credentials_exception
-
-        try:
-            user_id_int = int(user_id)
-        except ValueError:
-            print("❌ [DEBUG] 'sub' value not convertible to int:", user_id)
-            raise credentials_exception
-    except JWTError as e:
-        
+        user_id_int = int(user_id)
+    except (JWTError, ValueError):
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id_int).first()
     if not user:
-        print("❌ [DEBUG] User not found for id:", user_id_int)
         raise credentials_exception
-
-    
     return user
 
-
-# ---------------- Register ----------------
+# ---------------- Register (Employee) ----------------
 @app.post("/register", response_model=schemas.UserResponse, status_code=201)
 def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_data.email).first():
@@ -97,13 +95,38 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         password=hashed_pw,
         department=user_data.department,
-        role="employee",
+        role="employee",  # default role
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
+# ---------------- Register Admin ----------------
+@app.post("/register-admin", response_model=schemas.UserResponse, status_code=201)
+def register_admin(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+    """
+    Creates a new admin user. Only allowed if no admin exists yet OR existing admin creates.
+    """
+    existing_admin = db.query(User).filter(User.role == "admin").first()
+    if existing_admin:
+        raise HTTPException(status_code=403, detail="Admin already exists. Contact system admin.")
+
+    if db.query(User).filter(User.email == user_data.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    hashed_pw = auth.hash_password(user_data.password)
+    new_admin = User(
+        name=user_data.name,
+        email=user_data.email,
+        password=hashed_pw,
+        department=user_data.department,
+        role="admin",
+    )
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+    return new_admin
 
 # ---------------- Login ----------------
 @app.post("/login", response_model=schemas.Token)
@@ -114,13 +137,24 @@ def login(user_data: schemas.UserLogin, db: Session = Depends(get_db)):
 
     access_token = auth.create_access_token(subject=str(user.id))
     refresh_token = auth.create_refresh_token(subject=str(user.id))
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+    # ✅ Include role and name so frontend knows if it's admin
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "role": user.role,
+        "name": user.name,
+        "message": "Login successful"
+    }
 
 
 # ---------------- /me ----------------
 @app.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
 
 
 # ---------------- users/department ----------------
@@ -577,3 +611,298 @@ def get_comments(shoutout_id: int, db: Session = Depends(get_db)):
         )
         for c in comments
     ]
+# ---------------- Admin Dashboard: Top Contributors & Most Tagged ----------------
+# ---------------- Admin Dashboard: Top Contributors & Most Tagged ----------------
+@app.get("/admin/dashboard")
+def admin_dashboard(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # ✅ Only allow admin users
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    # ---- Top Contributors: users who sent the most shoutouts ----
+    top_contributors = (
+        db.query(User.name, func.count(ShoutOut.id).label("total_shoutouts"))
+        .outerjoin(ShoutOut, User.id == ShoutOut.sender_id)
+        .group_by(User.id)
+        .having(func.count(ShoutOut.id) > 0)  # only show users with shoutouts
+        .order_by(func.count(ShoutOut.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    # ---- Most Tagged: users who are recipients the most times ----
+    most_tagged = (
+        db.query(User.name, func.count(ShoutOutRecipient.id).label("times_tagged"))
+        .outerjoin(ShoutOutRecipient, User.id == ShoutOutRecipient.recipient_id)
+        .group_by(User.id)
+        .having(func.count(ShoutOutRecipient.id) > 0)  # only show users who were tagged
+        .order_by(func.count(ShoutOutRecipient.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    # Convert query results into plain dicts for frontend
+    return {
+        "top_contributors": [
+            {"name": name, "total_shoutouts": total} for name, total in top_contributors
+        ],
+        "most_tagged": [
+            {"name": name, "times_tagged": total} for name, total in most_tagged
+        ],
+    }
+# Delete shoutout
+# Delete shoutout
+
+
+@app.delete("/shoutouts/{shoutout_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_shoutout(shoutout_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shoutout not found")
+    
+    if shoutout.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    db.query(Comment).filter(Comment.shoutout_id == shoutout_id).delete(synchronize_session=False)
+    db.delete(shoutout)
+    db.commit()
+    return
+
+@app.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_comment(comment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    db.delete(comment)
+    db.commit()
+    return 
+
+
+@app.post("/reports", status_code=201)
+def report_shoutout(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    shoutout_id = payload.get("shoutout_id")
+    reason = payload.get("reason", "Inappropriate content")
+
+    # Validate shoutout
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shoutout not found")
+
+    # Prevent reporting own post
+    if shoutout.sender_id == current_user.id:
+        raise HTTPException(status_code=403, detail="You cannot report your own shoutout")
+
+    # Prevent duplicate reports
+    existing = (
+        db.query(Report)
+        .filter(Report.shoutout_id == shoutout_id, Report.reporter_id == current_user.id)
+ # ✅ fixed
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="You already reported this shoutout")
+
+    # Save report
+    report = Report(
+    shoutout_id=shoutout_id,
+    reporter_id=current_user.id,  # ✅ Correct
+    reason=reason
+    )
+
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+
+    return {"message": "✅ Report submitted successfully"}
+
+# --- Admin: View all reported shoutouts ---
+@app.get("/reports")
+def get_reported_shoutouts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    from models import Report
+
+    reports = (
+        db.query(Report)
+        .join(ShoutOut, Report.shoutout_id == ShoutOut.id)
+        .order_by(Report.created_at.desc())
+        .all()
+    )
+
+    if not reports:
+        return []
+
+    result = []
+    for report in reports:
+        s = report.shoutout
+        sender = db.query(User).filter(User.id == s.sender_id).first()
+        recipients = (
+            db.query(User)
+            .join(ShoutOutRecipient, User.id == ShoutOutRecipient.recipient_id)
+            .filter(ShoutOutRecipient.shoutout_id == s.id)
+            .all()
+        )
+        recipient_names = [r.name for r in recipients]
+
+        result.append(
+            {
+                "id": s.id,
+                "message": s.message,
+                "sender_name": sender.name if sender else "Unknown",
+                "created_at": s.created_at,
+                "image_url": s.image_url,
+                "recipient_names": recipient_names,
+                "reason": report.reason,
+                "reporter_name": report.reporter.name,
+            }
+        )
+    return result
+
+
+# --- Admin: Delete a reported shoutout (resolve report) ---
+@app.delete("/reports/{shoutout_id}/resolve", status_code=204)
+def resolve_report(
+    shoutout_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    shoutout = db.query(ShoutOut).filter(ShoutOut.id == shoutout_id).first()
+    if not shoutout:
+        raise HTTPException(status_code=404, detail="Shoutout not found")
+
+    # Delete related data
+    db.query(Comment).filter(Comment.shoutout_id == shoutout_id).delete(synchronize_session=False)
+    db.query(Report).filter(Report.shoutout_id == shoutout_id).delete(synchronize_session=False)
+    db.delete(shoutout)
+    db.commit()
+
+    return 
+from fastapi.responses import Response
+from io import StringIO, BytesIO
+import csv
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
+# -------------------- EXPORT ADMIN DASHBOARD DATA --------------------
+
+@app.get("/admin/export/csv")
+def export_admin_data_csv(db: Session = Depends(get_db)):
+    """Export admin dashboard data (top contributors + most tagged users) as CSV."""
+
+    # --- Fetch top contributors ---
+    top_contributors = (
+        db.query(User.name, func.count(ShoutOut.id).label("total_shoutouts"))
+        .join(ShoutOut, ShoutOut.sender_id == User.id)
+        .group_by(User.id)
+        .order_by(func.count(ShoutOut.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    # --- Fetch most tagged users ---
+    most_tagged = (
+        db.query(User.name, func.count(ShoutOutRecipient.id).label("times_tagged"))
+        .join(ShoutOutRecipient, ShoutOutRecipient.recipient_id == User.id)
+        .group_by(User.id)
+        .order_by(func.count(ShoutOutRecipient.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["Top Contributors"])
+    writer.writerow(["Username", "Posts Count"])
+    for row in top_contributors:
+        writer.writerow([row.name, row.total_shoutouts])
+
+    writer.writerow([])  # empty line
+    writer.writerow(["Most Tagged Users"])
+    writer.writerow(["Username", "Times Tagged"])
+    for row in most_tagged:
+        writer.writerow([row.name, row.times_tagged])
+
+    output.seek(0)
+    filename = "admin_dashboard_report.csv"
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.get("/admin/export/pdf")
+def export_admin_data_pdf(db: Session = Depends(get_db)):
+    """Export admin dashboard data (top contributors + most tagged users) as PDF."""
+
+    # --- Fetch data ---
+    top_contributors = (
+        db.query(User.name, func.count(ShoutOut.id).label("total_shoutouts"))
+        .join(ShoutOut, ShoutOut.sender_id == User.id)
+        .group_by(User.id)
+        .order_by(func.count(ShoutOut.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    most_tagged = (
+        db.query(User.name, func.count(ShoutOutRecipient.id).label("times_tagged"))
+        .join(ShoutOutRecipient, ShoutOutRecipient.recipient_id == User.id)
+        .group_by(User.id)
+        .order_by(func.count(ShoutOutRecipient.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    # --- Create PDF ---
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    y = height - 50
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, y, "Admin Dashboard Report")
+    y -= 40
+
+    # --- Top Contributors ---
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, y, "Top Contributors")
+    y -= 20
+    p.setFont("Helvetica", 11)
+    for row in top_contributors:
+        p.drawString(60, y, f"{row.name} - {row.total_shoutouts} posts")
+        y -= 15
+    y -= 20
+
+    # --- Most Tagged Users ---
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, y, "Most Tagged Users")
+    y -= 20
+    p.setFont("Helvetica", 11)
+    for row in most_tagged:
+        p.drawString(60, y, f"{row.name} - {row.times_tagged} times")
+        y -= 15
+
+    p.save()
+    buffer.seek(0)
+
+    filename = "admin_dashboard_report.pdf"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
