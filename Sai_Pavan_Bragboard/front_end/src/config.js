@@ -1,0 +1,1 @@
+export const MAIN_ADMIN_EMAIL = 'esikelasaipavan9@gmail.com';
