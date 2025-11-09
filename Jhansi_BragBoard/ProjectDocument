@@ -259,3 +259,94 @@ Week 5 introduced social engagement to BragBoard 🎉
 Users can now express appreciation for others’ shoutouts using reactions — making the platform more interactive and rewarding.
 
 ✨ The system accurately tracks each user’s reactions, updates counts in real-time, and ensures data consistency across frontend and backend.
+
+🌟 Week 6 — Report System, Admin Dashboard Export (PDF/CSV), and Final Testing
+
+✅ What I Did
+
+🧩 1. Added Report System
+
+Implemented reporting feature for shoutouts, allowing users to flag inappropriate posts.
+
+Created new reports table in PostgreSQL with fields:
+id, shoutout_id, reporter_id, reason, and created_at.
+
+Added corresponding FastAPI route /reports (POST) to submit reports securely.
+
+Integrated the frontend “Report” button with the backend API.
+
+Tested database relations between reports, users, and shoutouts tables to ensure consistency.
+
+⚙️ 2. Fixed Database & Model Issues
+
+Resolved column mismatch by renaming reported_by → reporter_id in PostgreSQL using:
+
+ALTER TABLE reports RENAME COLUMN reported_by TO reporter_id;
+
+
+Updated backend models and schemas accordingly.
+
+Ensured that all foreign keys and constraints are properly mapped.
+
+Verified successful API requests by testing through Postman and React frontend.
+
+📊 3. Implemented Admin Dashboard Data Export
+
+Enhanced Admin Dashboard to support exporting reports in PDF and CSV formats.
+
+Added two backend endpoints:
+
+/admin/reports/export/pdf
+
+/admin/reports/export/csv
+
+Used ReportLab for generating professional PDF files dynamically.
+
+Used CSV writer in FastAPI for exporting tabular data.
+
+Displayed two new buttons in the Admin Dashboard:
+🧾 Export PDF and 📄 Export CSV
+
+Download functionality now works directly via browser (no routing).
+
+💡 4. Enhanced Export Content
+
+Exported files include:
+
+Top Contributors (username + total shoutouts)
+
+Most Tagged Users (username + times tagged)
+
+Data fetched live from /admin/dashboard, ensuring the exported files always reflect current stats.
+
+🧪 5. Testing and Polishing
+
+Fixed 500 Internal Server Error due to missing Column import.
+
+Installed reportlab module to enable PDF generation.
+
+Cleaned up backend console errors and verified CORS functionality.
+
+Tested all major functionalities end-to-end:
+
+✅ Login / Register
+
+✅ Shoutouts & Reactions
+
+✅ Reporting System
+
+✅ Admin Dashboard
+
+✅ PDF/CSV Export
+
+Verified token-based access to admin endpoints for security.
+
+🎯 Outcome
+
+The BragBoard project reached feature completion in Week 6 🎉
+
+The Report System empowers users to maintain community standards.
+
+The Admin Dashboard now supports exporting analytical data in both PDF and CSV formats.
+
+Backend and frontend integration is smooth, error-free, and production-ready
