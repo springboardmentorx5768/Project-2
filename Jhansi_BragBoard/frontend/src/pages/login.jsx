@@ -16,13 +16,28 @@ export default function Login() {
       const res = await loginUser({ email, password });
 
       if (res && res.data) {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.setItem("access_token", res.data.access_token);
-        localStorage.setItem("refresh_token", res.data.refresh_token);
+        let { access_token, refresh_token, role } = res.data;
+
+        // ✅ Normalize role strictly
+        role = role?.toLowerCase().trim() === "admin" ? "admin" : "employee";
+
+        // Store tokens and role
+        localStorage.setItem("access_token", access_token);
+        localStorage.setItem("refresh_token", refresh_token);
+        localStorage.setItem("user_role", role);
+
+        console.log("Logged in role:", role); // ✅ Debug
 
         setMessage("✅ Login successful! Redirecting...");
-        setTimeout(() => navigate("/dashboard"), 1000);
+
+        // Redirect based on role
+        setTimeout(() => {
+          if (role === "admin") {
+            navigate("/admin", { replace: true });
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
+        }, 500);
       } else {
         setMessage("❌ Invalid response from server");
       }
@@ -51,7 +66,6 @@ export default function Login() {
             className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
-
           <input
             type="password"
             placeholder="Password"
@@ -60,7 +74,6 @@ export default function Login() {
             className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
-
           <button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl font-semibold transition-all duration-200"
