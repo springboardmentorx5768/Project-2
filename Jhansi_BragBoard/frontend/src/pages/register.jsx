@@ -7,19 +7,26 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [department, setDepartment] = useState("");
+  const [role, setRole] = useState("employee"); // default employee
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setMessage("Registering...");
+
     try {
-      await registerUser({ name, email, password, department });
-      setMessage("Registration successful! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 1500);
+      const res = await registerUser({ name, email, password, department, role });
+
+      if (res && res.data) {
+        setMessage("✅ Registration successful! Redirecting to login...");
+        setTimeout(() => navigate("/login"), 1000);
+      } else {
+        setMessage("❌ Invalid response from server");
+      }
     } catch (error) {
       console.error(error);
-      setMessage(error.response?.data?.detail || "Registration failed");
+      setMessage(error.response?.data?.detail || "❌ Registration failed");
     }
   };
 
@@ -30,13 +37,13 @@ export default function Register() {
           BragBoard
         </h1>
         <h2 className="text-2xl font-semibold text-center mb-6 text-gray-100">
-          Create Your Account
+          Create an Account
         </h2>
 
         <form onSubmit={handleRegister}>
           <input
             type="text"
-            placeholder="Name"
+            placeholder="Full Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -61,18 +68,31 @@ export default function Register() {
             required
           />
 
+          {/* Department Dropdown */}
           <select
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
             className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           >
-            <option value="">-- Select Department --</option>
-            <option value="IT">IT</option>
+            <option value="">Select Department</option>
+            <option value="All">All</option>
             <option value="HR">HR</option>
+            <option value="IT">IT</option>
             <option value="Finance">Finance</option>
             <option value="Marketing">Marketing</option>
             <option value="Operations">Operations</option>
+          </select>
+
+          {/* Role Selection */}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="border border-gray-700 bg-gray-900 text-gray-200 p-3 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="employee">Employee</option>
+            <option value="admin">Admin</option>
           </select>
 
           <button
