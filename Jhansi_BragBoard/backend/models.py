@@ -76,3 +76,15 @@ class Reaction(Base):
     # Relationships
     user = relationship("User", back_populates="reactions")
     shoutout = relationship("ShoutOut", back_populates="reactions")
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"))
+    reporter_id = Column(Integer, ForeignKey("users.id"))
+    reason = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    shoutout = relationship("ShoutOut", backref="reports")
+    reporter = relationship("User")
