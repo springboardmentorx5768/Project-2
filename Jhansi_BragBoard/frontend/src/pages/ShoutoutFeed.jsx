@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback ,useMemo} from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
+
 
 export default function ShoutoutFeed() {
   const [allShoutouts, setAllShoutouts] = useState([]);
@@ -11,6 +12,7 @@ export default function ShoutoutFeed() {
   const [newComment, setNewComment] = useState({});
   const [reactionCounts, setReactionCounts] = useState({});
   const [userReactions, setUserReactions] = useState({});
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const [senderFilter, setSenderFilter] = useState("");
   const [recipientFilter, setRecipientFilter] = useState("");
@@ -19,9 +21,25 @@ export default function ShoutoutFeed() {
   const filtersActive = useRef(false);
 
   const token = localStorage.getItem("access_token");
-  const headers = { Authorization: `Bearer ${token}` };
 
-  const fetchReactions = async (id) => {
+const headers = useMemo(() => {
+  return { Authorization: `Bearer ${localStorage.getItem("access_token")}` };
+}, []);
+
+
+  // Decode JWT to get current user id
+  useEffect(() => {
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setCurrentUserId(Number(payload.user_id || payload.sub || payload.id));
+      } catch (err) {
+        console.error("Error decoding token:", err);
+      }
+    }
+  }, [token]);
+
+  const fetchReactions = useCallback(async (id) => {
     try {
       const res = await axios.get(`http://127.0.0.1:8000/reactions/${id}`, { headers });
       setReactionCounts((prev) => ({ ...prev, [id]: res.data.counts }));
@@ -29,15 +47,46 @@ export default function ShoutoutFeed() {
     } catch (err) {
       console.error("Error fetching reactions:", err);
     }
-  };
+  }, [headers]);
 
-  const toggleReaction = async (id, type) => {
+  // Memoized fetchShoutouts function to satisfy ESLint
+  const fetchShoutouts = useCallback(async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:8000/shoutouts", { headers });
+      const data = Array.isArray(res.data) ? res.data : [];
+      setAllShoutouts(data);
+      if (!filtersActive.current) setFiltered(data);
+      setError("");
+
+      const allComments = {};
+      for (const s of data) {
+        const cRes = await axios.get(`http://127.0.0.1:8000/comments/${s.id}`, { headers });
+        allComments[s.id] = cRes.data;
+        await fetchReactions(s.id);
+      }
+      setComments(allComments);
+    } catch (err) {
+      console.error("Error fetching shoutouts:", err);
+      setError(err.response?.data?.detail || err.message || "Failed to fetch shoutouts.");
+    } finally {
+      setLoading(false);
+    }
+  }, [headers, fetchReactions]);
+
+  useEffect(() => {
+    fetchShoutouts();
+    const interval = setInterval(fetchShoutouts, 30000);
+    return () => clearInterval(interval);
+  }, [fetchShoutouts]); // ✅ include fetchShoutouts in dependency
+
+  // ---------------------- rest of your code remains unchanged ----------------------
+  // applyFilters, clearFilters, handleAddComment, handleDeleteShoutout, handleDeleteComment, toggleReaction, handleKeyDown...
+  // JSX rendering...
+const toggleReaction = useCallback(async (id, type) => {
   const userReacted = userReactions[id] || [];
   const counts = { ...reactionCounts[id] };
-
   const alreadyReacted = userReacted.includes(type);
 
-  // optimistic update
   if (alreadyReacted) {
     counts[type] = (counts[type] || 1) - 1;
     setUserReactions((prev) => ({
@@ -53,7 +102,6 @@ export default function ShoutoutFeed() {
   }
   setReactionCounts((prev) => ({ ...prev, [id]: counts }));
 
-  // send to backend
   try {
     await axios.post(
       "http://127.0.0.1:8000/reactions/toggle",
@@ -62,42 +110,11 @@ export default function ShoutoutFeed() {
     );
   } catch (err) {
     console.error("Error toggling reaction:", err);
-    // rollback if failed
     fetchReactions(id);
   }
-};
+}, [headers, userReactions, reactionCounts, fetchReactions]);
 
 
-  const fetchShoutouts = async () => {
-    try {
-      const res = await axios.get("http://127.0.0.1:8000/shoutouts", { headers });
-      const data = Array.isArray(res.data) ? res.data : [];
-      setAllShoutouts(data);
-      if (!filtersActive.current) setFiltered(data);
-      setError("");
-
-      // Fetch comments for each shoutout
-      const allComments = {};
-      for (const s of data) {
-        const cRes = await axios.get(`http://127.0.0.1:8000/comments/${s.id}`, { headers });
-        allComments[s.id] = cRes.data;
-        await fetchReactions(s.id);
-      }
-      setComments(allComments);
-    } catch (err) {
-      console.error("Error fetching shoutouts:", err);
-      const msg = err.response?.data?.detail || err.message || "Failed to fetch shoutouts.";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchShoutouts();
-    const interval = setInterval(fetchShoutouts, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const applyFilters = () => {
     filtersActive.current = true;
@@ -106,10 +123,7 @@ export default function ShoutoutFeed() {
         ? (s.sender_name || "").toLowerCase().includes(senderFilter.toLowerCase())
         : true;
       const recipientMatch = recipientFilter
-        ? (s.recipient_names || [])
-            .join(", ")
-            .toLowerCase()
-            .includes(recipientFilter.toLowerCase())
+        ? (s.recipient_names || []).join(", ").toLowerCase().includes(recipientFilter.toLowerCase())
         : true;
       const dateMatch = dateFilter
         ? new Date(s.created_at).toLocaleDateString() ===
@@ -138,12 +152,60 @@ export default function ShoutoutFeed() {
         { shoutout_id: shoutoutId, content },
         { headers }
       );
-
       const res = await axios.get(`http://127.0.0.1:8000/comments/${shoutoutId}`, { headers });
       setComments((prev) => ({ ...prev, [shoutoutId]: res.data }));
       setNewComment((prev) => ({ ...prev, [shoutoutId]: "" }));
     } catch (err) {
       console.error("Error adding comment:", err);
+    }
+  };
+  const handleReportShoutout = async (id) => {
+  if (!window.confirm("Do you want to report this shoutout as inappropriate?")) return;
+
+  try {
+    await axios.post(
+      "http://127.0.0.1:8000/reports",
+      { shoutout_id: id },
+      { headers }
+    );
+    alert("✅ Shoutout reported successfully!");
+  } catch (err) {
+    console.error("Error reporting shoutout:", err);
+    alert(err.response?.data?.detail || "❌ Failed to report shoutout.");
+  }
+};
+
+
+  const handleDeleteShoutout = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this shoutout?")) return;
+
+    try {
+      await axios.delete(`http://127.0.0.1:8000/shoutouts/${id}`, { headers });
+      setAllShoutouts((prev) => prev.filter((s) => s.id !== id));
+      setFiltered((prev) => prev.filter((s) => s.id !== id));
+      setComments((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+    } catch (err) {
+      console.error("Error deleting shoutout:", err);
+      alert("❌ Failed to delete shoutout!");
+    }
+  };
+
+  const handleDeleteComment = async (shoutoutId, commentId) => {
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+
+    try {
+      await axios.delete(`http://127.0.0.1:8000/comments/${commentId}`, { headers });
+      setComments((prev) => ({
+        ...prev,
+        [shoutoutId]: prev[shoutoutId].filter((c) => c.id !== commentId),
+      }));
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+      alert("❌ Failed to delete comment!");
     }
   };
 
@@ -157,7 +219,6 @@ export default function ShoutoutFeed() {
   return (
     <div className="flex h-screen w-screen bg-gray-900 text-white overflow-hidden">
       <Sidebar />
-
       <main className="flex-1 bg-gray-900 overflow-y-auto px-8 py-10">
         <div className="w-full">
           <h1 className="text-3xl font-bold mb-8 text-blue-400 text-center">📢 Shoutout Feed</h1>
@@ -218,10 +279,31 @@ export default function ShoutoutFeed() {
                   key={s.id}
                   className="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hover:bg-gray-750 transition"
                 >
-                  <p className="text-blue-400 font-semibold">
-                    {(s.sender_name || "Unknown")} ➜{" "}
-                    {s.recipient_names?.length ? s.recipient_names.join(", ") : "All"}
-                  </p>
+                  <p className="text-blue-400 font-semibold flex justify-between items-center">
+  <span>
+    {s.sender_name || "Unknown"} ➜{" "}
+    {s.recipient_names?.length ? s.recipient_names.join(", ") : "All"}
+  </span>
+
+  <span>
+    {Number(s.sender_id) === currentUserId ? (
+      <button
+        onClick={() => handleDeleteShoutout(s.id)}
+        className="ml-2 text-red-500 text-xs hover:underline"
+      >
+        Delete
+      </button>
+    ) : (
+      <button
+        onClick={() => handleReportShoutout(s.id)}
+        className="ml-2 text-yellow-400 text-xs hover:underline"
+      >
+        🚩 Report
+      </button>
+    )}
+  </span>
+</p>
+
                   <p className="text-gray-300 mt-3 leading-relaxed">{s.message}</p>
                   {s.image_url && (
                     <img
@@ -234,7 +316,7 @@ export default function ShoutoutFeed() {
                     {s.created_at ? new Date(s.created_at).toLocaleString() : ""}
                   </p>
 
-                  {/* 🧡 Reactions */}
+                  {/* Reactions */}
                   <div className="flex justify-around mt-4">
                     {["like", "clap", "star"].map((type) => (
                       <button
@@ -252,14 +334,24 @@ export default function ShoutoutFeed() {
                     ))}
                   </div>
 
-                  {/* 💬 Comments */}
+                  {/* Comments */}
                   <div className="mt-4 bg-gray-700 p-3 rounded-xl">
                     <h4 className="text-sm font-semibold text-blue-300 mb-2">💬 Comments</h4>
                     <div className="space-y-1 max-h-32 overflow-y-auto">
                       {(comments[s.id] || []).length > 0 ? (
                         comments[s.id].map((c) => (
-                          <p key={c.id} className="text-sm">
-                            <b className="text-blue-400">{c.user_name}:</b> {c.content}
+                          <p key={c.id} className="text-sm flex justify-between">
+                            <span>
+                              <b className="text-blue-400">{c.user_name}:</b> {c.content}
+                            </span>
+                            {Number(c.user_id) === currentUserId && (
+                              <button
+                                onClick={() => handleDeleteComment(s.id, c.id)}
+                                className="text-red-400 text-xs hover:underline ml-2"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </p>
                         ))
                       ) : (
