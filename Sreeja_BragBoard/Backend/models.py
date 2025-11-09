@@ -48,12 +48,14 @@ class Comment(Base):
     id = Column(Integer, primary_key=True, index=True)
     shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
     comment_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     shoutout = relationship("ShoutOut", back_populates="comments")
     user = relationship("User")
+    replies = relationship("Comment", backref=relationship("Comment", remote_side=[id]))
 
 class Reaction(Base):
     __tablename__ = "reactions"
@@ -67,6 +69,24 @@ class Reaction(Base):
     # Relationships
     shoutout = relationship("ShoutOut", back_populates="reactions")
     user = relationship("User")
+
+class Report(Base):
+    __tablename__ = "reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    shoutout_id = Column(Integer, ForeignKey("shoutouts.id"), nullable=False)
+    reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(String, nullable=False)
+    details = Column(Text, nullable=True)
+    status = Column(Enum("pending", "resolved", "dismissed", name="report_status"), default="pending")
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    shoutout = relationship("ShoutOut")
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    resolver = relationship("User", foreign_keys=[resolved_by])
 
 class ActivityLog(Base):
     __tablename__ = "activity_logs"

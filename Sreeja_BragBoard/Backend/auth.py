@@ -73,4 +73,8 @@ def get_current_user(
     except Exception:
         raise credentials_exception
 
+async def is_admin(user: models.User, db: Session) -> bool:
+    """Check if the user is an admin"""
+    return user.role == "admin"
+
 

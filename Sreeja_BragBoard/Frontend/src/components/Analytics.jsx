@@ -40,6 +40,8 @@ const Analytics = ({ user }) => {
     avgPerUser: 0,
     topDepartment: 'N/A'
   });
+  const [topContributors, setTopContributors] = useState([]);
+  const [departmentStats, setDepartmentStats] = useState([]);
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -48,9 +50,15 @@ const Analytics = ({ user }) => {
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
-      const response = await api.getShoutouts();
-      setShoutouts(response.data);
-      calculateStats(response.data);
+      const [response, contributors, departments] = await Promise.all([
+        api.getShoutouts(),
+        api.getTopContributors(),
+        api.getDepartmentAnalytics()
+      ]);
+      setShoutouts(response);
+      setTopContributors(contributors);
+      setDepartmentStats(departments);
+      calculateStats(response);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -394,51 +402,109 @@ const Analytics = ({ user }) => {
           </div>
         </div>
 
-        {/* Performance Overview */}
+        {/* Top Contributors */}
         <div className="bg-white rounded-xl shadow-elegant p-6 border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
             </svg>
-            Performance Overview
+            Top Contributors
           </h3>
           <div className="space-y-4 mt-6">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Engagement Rate</span>
-                <span className="font-semibold text-gray-900">85%</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '85%' }}></div>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">User</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Department</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Given</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Received</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topContributors.map((user) => (
+                    <tr key={user.user_id} className="border-t border-gray-100">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center text-white font-bold">
+                            {user.name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{user.department}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{user.shoutouts_given}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{user.shoutouts_received}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">{user.engagement_score}</span>
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-primary-600 h-2 rounded-full"
+                              style={{
+                                width: `${(user.engagement_score / Math.max(...topContributors.map(u => u.engagement_score))) * 100}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Response Time</span>
-                <span className="font-semibold text-gray-900">92%</span>
+          </div>
+        </div>
+
+        {/* Department Performance */}
+        <div className="bg-white rounded-xl shadow-elegant p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            Department Performance
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            {departmentStats.map((dept) => (
+              <div key={dept.department} className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-base font-semibold text-gray-800 mb-3">{dept.department}</h4>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Total Shoutouts</span>
+                      <span className="font-medium text-gray-900">{dept.total_shoutouts}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-primary-600 h-2 rounded-full"
+                        style={{
+                          width: `${(dept.total_shoutouts / Math.max(...departmentStats.map(d => d.total_shoutouts))) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <div>
+                      <span className="block font-medium">Internal</span>
+                      <span>{dept.internal_shoutouts}</span>
+                    </div>
+                    <div>
+                      <span className="block font-medium">External</span>
+                      <span>{dept.external_shoutouts}</span>
+                    </div>
+                    <div>
+                      <span className="block font-medium">Ratio</span>
+                      <span>
+                        {dept.total_shoutouts
+                          ? `${Math.round((dept.external_shoutouts / dept.total_shoutouts) * 100)}%`
+                          : '0%'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '92%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Team Participation</span>
-                <span className="font-semibold text-gray-900">78%</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '78%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Quality Score</span>
-                <span className="font-semibold text-gray-900">88%</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '88%' }}></div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

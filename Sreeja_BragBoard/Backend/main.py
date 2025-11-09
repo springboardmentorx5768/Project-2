@@ -9,6 +9,9 @@ from routers.shoutouts import router as shoutouts_router
 from routers.activity import router as activity_router
 from routers.reactions import router as reactions_router
 from routers.comments import router as comments_router
+from routers.analytics import router as analytics_router
+from routers.reports import router as reports_router
+from routers.exports import router as exports_router
 import time
 
 # Create tables
@@ -64,4 +67,7 @@ app.include_router(shoutouts_router)
 app.include_router(activity_router)
 app.include_router(reactions_router)
 app.include_router(comments_router)
+app.include_router(analytics_router)
+app.include_router(reports_router)
+app.include_router(exports_router)
 

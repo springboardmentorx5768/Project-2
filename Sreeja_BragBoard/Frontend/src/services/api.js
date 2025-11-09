@@ -169,9 +169,16 @@ class ApiService {
   }
 
   async deleteShoutout(shoutoutId) {
-    return this.authenticatedRequest(`/shoutouts/${shoutoutId}`, {
-      method: 'DELETE',
-    });
+    try {
+      const response = await this.authenticatedRequest(`/shoutouts/${shoutoutId}`, {
+        method: 'DELETE',
+      });
+      return response;
+    } catch (error) {
+      console.error('Error deleting shoutout:', error);
+      const message = error.response?.data?.detail || 'Failed to delete shoutout';
+      throw new Error(message);
+    }
   }
 
   async getDepartmentStats() {
@@ -186,6 +193,33 @@ class ApiService {
 
   async getLeaderboard(limit = 10) {
     return this.authenticatedRequest(`/shoutouts/leaderboard?limit=${limit}`);
+  }
+
+  // Report management methods
+  async reportShoutout(shoutoutId, reason, details = '') {
+    return this.authenticatedRequest('/reports/', {
+      method: 'POST',
+      body: JSON.stringify({
+        shoutout_id: shoutoutId,
+        reason,
+        details
+      }),
+    });
+  }
+
+  async getReports(status = null) {
+    const url = status ? `/reports/?status=${status}` : '/reports/';
+    return this.authenticatedRequest(url);
+  }
+
+  async updateReportStatus(reportId, status, note = '') {
+    return this.authenticatedRequest(`/reports/${reportId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status,
+        note
+      }),
+    });
   }
 
   async searchUsers(department = '', search = '') {
@@ -263,13 +297,58 @@ class ApiService {
     return this.authenticatedRequest(`/reactions/${shoutoutId}/users`);
   }
 
+    // Analytics methods
+  async getTopContributors(limit = 10) {
+    return this.authenticatedRequest(`/analytics/leaderboard/givers?limit=${limit}`);
+  }
+
+  async getTopReceivers(limit = 10) {
+    return this.authenticatedRequest(`/analytics/leaderboard/receivers?limit=${limit}`);
+  }
+
+  async getDepartmentAnalytics() {
+    return this.authenticatedRequest('/analytics/department-stats');
+  }
+
+  // Export methods
+  async exportReportsCsv(status = null) {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    
+    const token = localStorage.getItem('access_token');
+    if (!token) throw new Error('No access token found');
+
+    const response = await fetch(`${API_BASE_URL}/exports/reports/csv?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.detail || 'Failed to export reports');
+    }
+
+    // Trigger file download
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = response.headers.get('content-disposition')?.split('filename=')[1] || 'reports.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+
   // Comment methods
-  async addComment(shoutoutId, commentText) {
+  async addComment(shoutoutId, commentText, parentId = null) {
     return this.authenticatedRequest('/comments/', {
       method: 'POST',
       body: JSON.stringify({
         shoutout_id: shoutoutId,
-        comment_text: commentText
+        comment_text: commentText,
+        parent_id: parentId
       }),
     });
   }
@@ -279,9 +358,16 @@ class ApiService {
   }
 
   async deleteComment(commentId) {
-    return this.authenticatedRequest(`/comments/${commentId}`, {
-      method: 'DELETE',
-    });
+    try {
+      const response = await this.authenticatedRequest(`/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      return response;
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      const message = error.response?.data?.detail || 'Failed to delete comment';
+      throw new Error(message);
+    }
   }
 
 

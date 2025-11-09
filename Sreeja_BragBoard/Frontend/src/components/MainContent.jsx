@@ -3,7 +3,9 @@ import api from '../services/api';
 import Analytics from './Analytics';
 import ActivityLog from './ActivityLog';
 import ReactionButtons from './ReactionButtons';
+import ConfirmDialog from './ConfirmDialog';
 import Comments from './Comments';
+import Leaderboard from './Leaderboard';
 
 const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) => {
   // Additional state for filters and image preview
@@ -37,6 +39,12 @@ const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) =>
   const [leaderboard, setLeaderboard] = useState({ top_givers: [], top_receivers: [] });
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    shoutoutToDelete: null,
+    title: '',
+    message: ''
+  });
   const [lastApiError, setLastApiError] = useState(null);
 
   // Fetch my shoutouts when activeView changes to 'my-shoutouts'
@@ -316,10 +324,21 @@ const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) =>
   };
 
   // Delete shoutout function
-  const handleDeleteShoutout = async (shoutoutId) => {
-    if (!window.confirm('Are you sure you want to delete this shout-out?')) {
-      return;
-    }
+  const handleDeleteShoutout = (shoutoutId) => {
+    const shoutout = shoutOuts.find(s => s.id === shoutoutId);
+    if (!shoutout) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      shoutoutToDelete: shoutoutId,
+      title: 'Delete Shout-Out',
+      message: `Are you sure you want to delete the shout-out "${shoutout.title}"? This action cannot be undone.`
+    });
+  };
+
+  const confirmDeleteShoutout = async () => {
+    const shoutoutId = confirmDialog.shoutoutToDelete;
+    if (!shoutoutId) return;
 
     try {
       await api.deleteShoutout(shoutoutId);
@@ -327,9 +346,11 @@ const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) =>
       setTimeout(() => setSuccessMessage(''), 5000);
       fetchShoutOuts();
       fetchMyStats(); // Update stats after deleting shoutout
+      setConfirmDialog({ ...confirmDialog, isOpen: false });
     } catch (error) {
       setErrorMessage(error.message || 'Failed to delete shout-out');
       setTimeout(() => setErrorMessage(''), 5000);
+      setConfirmDialog({ ...confirmDialog, isOpen: false });
     }
   };
 
@@ -1349,6 +1370,22 @@ const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) =>
       case 'activity':
         return <ActivityLog user={user} />;
 
+      case 'reports':
+        if (user?.role !== 'admin') {
+          return (
+            <div className="flex items-center justify-center h-full">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center max-w-md">
+                <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Access Denied</h3>
+                <p className="text-gray-600">You need admin privileges to access reports.</p>
+              </div>
+            </div>
+          );
+        }
+        return <Reports />;
+
       case 'department-activity':
         return (
           <div className="space-y-6 animate-fadeInUp">
@@ -1574,6 +1611,14 @@ const MainContent = ({ activeView, setActiveView, selectedDepartment, user }) =>
           </div>
         </div>
       )}
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDeleteShoutout}
+      />
     </div>
   );
 };

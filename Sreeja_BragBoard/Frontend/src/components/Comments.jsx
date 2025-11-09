@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import CommentItem from './CommentItem';
+import ConfirmDialog from './ConfirmDialog';
 
 const Comments = ({ shoutoutId, currentUser }) => {
   const [comments, setComments] = useState([]);
@@ -9,6 +11,13 @@ const Comments = ({ shoutoutId, currentUser }) => {
   const [error, setError] = useState('');
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    commentToDelete: null,
+    title: '',
+    message: ''
+  });
+  const [replyingTo, setReplyingTo] = useState(null);
 
   useEffect(() => {
     if (showComments) {
@@ -29,16 +38,33 @@ const Comments = ({ shoutoutId, currentUser }) => {
     }
   };
 
-  const handleAddComment = async (e) => {
+  const handleAddComment = async (e, parentId = null) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
     try {
       setLoading(true);
       setError('');
-      const comment = await api.addComment(shoutoutId, newComment);
-      setComments([comment, ...comments]);
+      const comment = await api.addComment(shoutoutId, newComment, parentId);
+      if (parentId) {
+        // Update the nested comments structure
+        const updateCommentsWithReply = (comments) => {
+          return comments.map(c => {
+            if (c.id === parentId) {
+              return { ...c, replies: [comment, ...(c.replies || [])] };
+            }
+            if (c.replies) {
+              return { ...c, replies: updateCommentsWithReply(c.replies) };
+            }
+            return c;
+          });
+        };
+        setComments(updateCommentsWithReply(comments));
+      } else {
+        setComments([comment, ...comments]);
+      }
       setNewComment('');
+      setReplyingTo(null);
     } catch (err) {
       console.error('Error adding comment:', err);
       setError('Failed to add comment');
@@ -48,14 +74,35 @@ const Comments = ({ shoutoutId, currentUser }) => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Delete this comment?')) return;
+    setConfirmDialog({
+      isOpen: true,
+      commentToDelete: commentId,
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment? This action cannot be undone.'
+    });
+  };
+
+  const confirmDeleteComment = async () => {
+    const commentId = confirmDialog.commentToDelete;
+    if (!commentId) return;
 
     try {
       await api.deleteComment(commentId);
-      setComments(comments.filter(c => c.id !== commentId));
+      // Remove the comment from state, including from replies
+      const removeComment = (comments) => {
+        return comments.filter(c => {
+          if (c.id === commentId) return false;
+          if (c.replies) {
+            c.replies = removeComment(c.replies);
+          }
+          return true;
+        });
+      };
+      setComments(removeComment(comments));
+      setError('');
     } catch (err) {
       console.error('Error deleting comment:', err);
-      setError('Failed to delete comment');
+      setError(err.message || 'Failed to delete comment');
     }
   };
 
@@ -154,50 +201,39 @@ const Comments = ({ shoutoutId, currentUser }) => {
               <p className="text-xs text-gray-400">Be the first to comment!</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {comments.map((comment) => (
-                <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        {comment.user_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{comment.user_name}</p>
-                        <p className="text-xs text-gray-500">{comment.user_department}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">
-                        {new Date(comment.created_at).toLocaleString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                      {(comment.user_id === currentUser?.id || currentUser?.role === 'admin') && (
-                        <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="text-red-500 hover:text-red-700 transition-colors"
-                          title="Delete comment"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
-                    {comment.comment_text}
-                  </p>
-                </div>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {/* Only show top-level comments here */}
+              {comments
+                .filter(comment => !comment.parent_id)
+                .map((comment) => (
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    currentUser={currentUser}
+                    onDelete={handleDeleteComment}
+                    onReply={async (parentId, replyText) => {
+                      try {
+                        const comment = await api.addComment(shoutoutId, replyText, parentId);
+                        await fetchComments(); // Refresh all comments to get the updated structure
+                      } catch (err) {
+                        setError('Failed to add reply');
+                      }
+                    }}
+                  />
               ))}
             </div>
           )}
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDeleteComment}
+      />
     </div>
   );
 };

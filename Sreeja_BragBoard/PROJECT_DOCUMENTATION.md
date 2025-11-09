@@ -388,11 +388,70 @@ CREATE TABLE users (
 ## 🔮 Future Enhancements
 
 ### Immediate Improvements (Phase 1)
-- User profile management dashboard
-- Achievement posting and management
-- File upload for profile pictures
-- Advanced search and filtering
-- Email verification system
+
+
+## 🆕 Week 6 Features & Tasks
+
+This week the project received several feature additions and improvements. Below is a concise summary plus implementation details and where to find the code.
+
+### Summary
+- Commenting system for shout-outs (with avatars, timestamps and optional nesting)
+- Admin dashboard (top contributors, most tagged, analytics)
+- Delete functionality for posts and comments (with permission checks)
+- Report management UI and API (view, resolve, add notes)
+- Exportable reports (CSV and PDF)
+- Leaderboard for gamified appreciation
+- Final deployment, testing, and UI polish
+
+### Implementation details (where to look)
+
+1) Commenting system
+
+- Database: new `comments` table with fields: `id`, `shoutout_id` (FK), `user_id` (FK), `parent_id` (nullable FK to comments), `comment_text`, `created_at`.
+- Backend: `Backend/routers/comments.py` implements:
+    - `POST /comments/` to create a comment (auth required)
+    - `GET /comments/{shoutout_id}` to fetch comments (nested tree returned)
+    - `DELETE /comments/{comment_id}` to delete (allowed for owner or admin)
+- Frontend: `Frontend/src/components/Comments.jsx` and `CommentItem.jsx` render the comment tree, show avatars, and display friendly timestamps. Comment creation uses `api.js`'s POST wrapper.
+
+2) Avatars, timestamps, nesting
+
+- Avatars: use `users.image_url` when available; otherwise render initials or Gravatar-style placeholder.
+- Timestamps: stored UTC in DB; frontend displays using local formatting (e.g. `new Date(created_at).toLocaleString()`).
+- Nesting: `parent_id` enables threaded replies. API returns `children` arrays for easy rendering.
+
+3) Admin dashboard & analytics
+
+- Backend: `Backend/routers/analytics.py` aggregates data (top givers/receivers, most tagged users, department stats).
+- Frontend: `Dashboard.jsx`, `Analytics.jsx`, and `Leaderboard.jsx` show charts, tables, and lists for admin insights.
+
+4) Delete posts/comments
+
+- Backend: DELETE endpoints for shout-outs and comments include permission checks (author or admin). See `routers/shoutouts.py` and `routers/comments.py`.
+- Frontend: delete actions are protected by UI checks and show a confirmation dialog (`ConfirmDialog.jsx`).
+
+5) Report management
+
+- Backend: `Backend/routers/reports.py` supports creating reports, listing with filters, and updating status (pending/resolved/dismissed) with notes.
+- Frontend: `Reports.jsx` lists reports, supports filtering by status, resolving and adding notes via `ReportDialog.jsx`.
+
+6) Export reports (CSV / PDF)
+
+- Backend: endpoints to export CSV (standard `csv` module) and PDF (optional dependencies such as `reportlab`/`weasyprint`). Exports send proper `Content-Disposition` headers.
+- Frontend: Export button triggers fetch and downloads the returned blob as a file.
+
+7) Leaderboard
+
+- Backend: leaderboard aggregation (shout-outs given/received, reactions) available via analytics endpoint with `limit` parameter.
+- Frontend: `Leaderboard.jsx` displays ranked users, their avatars and scores.
+
+8) Deployment, testing, and polish
+
+- Backend: environment configs finalized; migrations updated; manual and automated API tests executed.
+- Frontend: UI polish, responsive checks, performance tuning (Vite build, Tailwind purge), and bug fixes.
+
+If you want, I can append code snippets for each endpoint or add a short README section that lists the exact files modified for Week 6.
+
 
 ### Medium-term Features (Phase 2)
 - Admin dashboard for user management
@@ -409,6 +468,7 @@ CREATE TABLE users (
 - API for third-party integrations
 
 ---
+
 
 ## 📚 Learning Outcomes
 

@@ -15,6 +15,7 @@ router = APIRouter(prefix="/comments", tags=["comments"])
 class CommentCreate(BaseModel):
     shoutout_id: int
     comment_text: str
+    parent_id: Optional[int] = None  # For nested comments
 
 class CommentResponse(BaseModel):
     id: int
@@ -24,6 +25,9 @@ class CommentResponse(BaseModel):
     user_department: str
     comment_text: str
     created_at: str
+    parent_id: Optional[int] = None
+    replies: Optional[List["CommentResponse"]] = []
+    avatar_url: Optional[str] = None  # For user avatars
     
     class Config:
         from_attributes = True

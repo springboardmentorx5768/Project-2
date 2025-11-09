@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MainContent from './MainContent'
+import Reports from './Reports'
 
 const Dashboard = ({ user, onLogout }) => {
   const [selectedDepartment, setSelectedDepartment] = useState('all')
