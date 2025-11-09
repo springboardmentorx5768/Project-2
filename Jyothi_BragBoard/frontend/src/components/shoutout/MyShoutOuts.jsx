@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef } from "react";
 import { Edit2, Trash2, TargetIcon, RotateCcw } from "lucide-react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { motion } from "framer-motion";
 import EditShoutOut from "./EditShoutOut";
 import ReactionBar from "./ReactionBar";
+import CommentSection from "./CommentSection";
 import ApiService from "../../services/api";
 
 dayjs.extend(utc);
@@ -18,6 +19,8 @@ export default function MyShoutOuts({ currentUser }) {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingShoutoutId, setEditingShoutoutId] = useState(null);
   const [stats, setStats] = useState({ total: 0, sent: 0, received: 0 });
+  const [openCommentsId, setOpenCommentsId] = useState(null);
+  const [commentCounts, setCommentCounts] = useState({}); // { [shoutId]: count }
 
   const departments = [
     "All Departments",
@@ -29,6 +32,20 @@ export default function MyShoutOuts({ currentUser }) {
     "Operations",
     "Design",
   ];
+
+  const menuRefs = useRef({});
+
+useEffect(() => {
+  const handleOutsideClick = (e) => {
+    if (openMenuId && menuRefs.current[openMenuId] && 
+        !menuRefs.current[openMenuId].contains(e.target)) {
+      setOpenMenuId(null);
+    }
+  };
+
+  document.addEventListener("mousedown", handleOutsideClick);
+  return () => document.removeEventListener("mousedown", handleOutsideClick);
+}, [openMenuId]);
 
   // Fetch shoutouts
   const fetchShoutouts = async () => {
@@ -92,7 +109,7 @@ export default function MyShoutOuts({ currentUser }) {
 
   return (
     <div className="p-4 flex flex-col space-y-6">
-     <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 via-violet-500 to-indigo-500 text-transparent bg-clip-text">
+     <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-700 via-pink-500 to-indigo-500 text-transparent bg-clip-text">
        My Shout-Outs
       </h2>
       <p className="text-gray-500 mb-6">
@@ -101,10 +118,11 @@ export default function MyShoutOuts({ currentUser }) {
 
       {/* Filters */}
       <motion.div
-className="
-bg-white/70 backdrop-blur-md border border-gray-200
-rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-4
-"        initial={{ opacity: 0, y: -10 }}
+        className="
+         bg-white/70 backdrop-blur-md border border-gray-200
+           rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-4
+          "        
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <div className="flex items-center space-x-2 min-w-[200px]">
@@ -193,143 +211,181 @@ rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-4
       )}
 
       {shoutouts.map((shout) => (
-        <motion.div
+       <motion.div
           key={shout.id}
-          className=" 
-          relative overflow-visible z-20
-          bg-white/80 backdrop-blur-lg border border-gray-200
-          rounded-3xl p-6 shadow-sm hover:shadow-md transition-all
-          "
+          className="bg-white-100 border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-visible"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-        >
-          {/* Header */}
-      <div className="flex justify-between items-start mb-3 relative">
-        <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-          {shout.giver_name?.charAt(0).toUpperCase() || "U"}
+       >
+
+     {/* TOP HEADER (Matches Feed) */}
+     <div className="flex justify-between items-start">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center text-white font-semibold">
+          {shout.giver_name?.charAt(0).toUpperCase()}
         </div>
-        <div>
-        <p className="font-semibold text-gray-800">{shout.giver_name}</p>
-        <p className="text-gray-500 text-xs">
-          {`${shout.giver_department || "N/A"} | ${shout.giver_role || "N/A"}`}
-        </p>
-       </div>
+
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-gray-800">{shout.giver_name}</span>
+          <span className="text-xs text-gray-500">{shout.giver_department} | {shout.giver_role}</span>
+
+          <span className="inline-block mt-2 text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-medium">
+            To: {shout.receiver_name} | {shout.receiver_department} | {shout.receiver_role}
+          </span>
+        </div>
       </div>
 
-    <div className="flex flex-col items-end relative">
-    {/* Always show created/edited times */}
-    <div className="text-gray-500 text-xs flex flex-col items-end">
-      <span>
-        Created: {dayjs.utc(shout.created_at).local().format("DD MMM YYYY, hh:mm A")}
-      </span>
-      {shout.edited_at && (
-        <span className="text-violet-600 italic">
-           Edited: {dayjs.utc(shout.edited_at).local().format("DD MMM YYYY, hh:mm A")}
-        </span>
+      <div
+          className="flex items-center gap-2 relative"
+          ref={(el) => (menuRefs.current[shout.id] = el)}
+      > 
+      {shout.category && (
+          <span className="inline-block mt-1 text-[11px] bg-indigo-50 text-indigo-700 px-2 py-[3px] rounded-md font-medium">
+             🏷 {shout.category}
+          </span>
       )}
-    </div>
+        <p className="text-[11px] text-gray-400 whitespace-nowrap">
+          {shout.edited_at
+            ? `Edited: ${dayjs.utc(shout.edited_at).local().format("DD MMM YYYY, hh:mm A")}`
+            : dayjs.utc(shout.created_at).local().format("DD MMM YYYY, hh:mm A")}
+        </p>
 
-    {(shout.giver_id === currentUser.id || currentUser.role === "admin") && (
-  <div className="relative mt-1">
-    <button
-      onClick={() => setOpenMenuId(openMenuId === shout.id ? null : shout.id)}
-      className="text-gray-500 hover:text-gray-800 text-xl font-bold focus:outline-none"
-    >
+         {/* 3 Dots Button: show always if user can take any action */}
+      {(shout.giver_id === currentUser.id || currentUser.role === "admin" || currentUser.role !== "admin") && (
+      <>
+      <button
+          onClick={(e) => {
+          e.stopPropagation();
+          setOpenMenuId(openMenuId === shout.id ? null : shout.id);
+        }}
+        className="p-1 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition"
+      >
       ⋮
-    </button>
+      </button>
 
-    {openMenuId === shout.id && (
-      <div className="absolute right-0 mt-2 w-28 bg-white border rounded-xl shadow-lg flex flex-col z-20">
-
+      {openMenuId === shout.id && (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute right-0 top-6 bg-white border border-gray-200 
+          rounded-xl shadow-lg w-36 overflow-hidden z-50 animate-[fadeIn_0.15s_ease-out]"
+      >
+        {/* Edit button: only creator */}
         {shout.giver_id === currentUser.id && (
           <button
             onClick={() => {
               setEditingShoutoutId(shout.id);
               setOpenMenuId(null);
             }}
-            className="px-4 py-2 text-left text-sm hover:bg-blue-100 rounded-t-xl flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 transition"
           >
-            <Edit2 size={14} /> Edit
+            ✏️ Edit
           </button>
         )}
 
-        {/*   Delete for giver OR admin */}
-        <button
-          onClick={() => {
-            deleteShoutout(shout.id);
-            setOpenMenuId(null);
-          }}
-          className={`px-4 py-2 text-left text-sm hover:bg-red-100 flex items-center gap-2 ${
-            shout.giver_id !== currentUser.id ? "rounded-xl" : "rounded-b-xl"
-          }`}
-        >
-          <Trash2 size={14} /> Delete
-        </button>
+        {/* Delete button: creator or admin */}
+        {(currentUser.role === "admin" || shout.giver_id === currentUser.id) && (
+          <button
+            onClick={() => {
+              deleteShoutout(shout.id);
+              setOpenMenuId(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition"
+          >
+            🗑 Delete
+          </button>
+        )}
 
+        {/* Report button: only non-admin & non-creator */}
+        {shout.giver_id !== currentUser.id && currentUser.role !== "admin" && (
+          <button
+            onClick={async () => {
+              const reason = prompt("Please enter the reason for reporting this shoutout:");
+              if (!reason || !reason.trim()) return;
+              await ApiService.reportShoutout(shout.id, reason.trim());
+              alert("Report submitted successfully!");
+              setOpenMenuId(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-yellow-700 hover:bg-yellow-50 transition"
+          >
+            🚩 Report
+          </button>
+        )}
+      </div>
+      )}
+      </>
+     )}
+    </div>
+    </div>
+
+    {/* MESSAGE */}
+    {editingShoutoutId !== shout.id && (
+      <p className="text-gray-700 text-sm mt-4 leading-relaxed">
+        {shout.edited_at && <span className="text-violet-600 font-medium mr-1">(Edited)</span>}
+        {shout.message}
+      </p>
+    )}
+
+    {/* IMAGE */}
+    {shout.image_url && (
+      <img
+        src={shout.image_url}
+        alt="attachment"
+        className="w-full max-w-lg rounded-lg mt-4 shadow-sm"
+      />
+    )}
+
+    {/* TAGS */}
+    {shout.tagged_users?.length > 0 && (
+      <div className="flex flex-wrap gap-2 mt-3">
+        {shout.tagged_users.map((u) => (
+          <span key={u.id} className="px-2 py-1 bg-purple-100 text-gray-700 rounded-full text-xs font-medium">
+            <TargetIcon size={12} className="inline mr-1" /> {u.username}
+          </span>
+        ))}
       </div>
     )}
-  </div>
-)}
 
+    {/* Reactions + View Comments */}
+    <div className="flex justify-between items-center mt-5 pt-3 border-t border-gray-200">
+      <ReactionBar shoutout={shout} />
+
+      <button
+        onClick={() =>
+        setOpenCommentsId(openCommentsId === shout.id ? null : shout.id)
+        }
+        className="text-sm font-semibold text-violet-600 hover:underline"
+      >
+      {openCommentsId === shout.id
+        ? `Hide Comments (${commentCounts[shout.id] ?? shout.comment_count ?? 0})`
+        : `View Comments (${commentCounts[shout.id] ?? shout.comment_count ?? 0})`}
+      </button>
+
+    </div>
+    {/* Show Comments BELOW card when opened */}
+     {openCommentsId === shout.id && (
+      <div className="mt-4">
+       <CommentSection
+          shoutoutId={shout.id}
+          currentUser={currentUser}
+          onCommentCountChange={(count) =>
+          setCommentCounts((prev) => ({ ...prev, [shout.id]: count }))
+        }
+       />
       </div>
-      </div> 
-          {/* Receiver */}
-          <div className="flex items-center mb-2">
-          <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full text-xs font-semibold">
-          🎯 To: {shout.receiver_name} | {shout.receiver_department || "N/A"} | {shout.receiver_role || "N/A"}
-            </span>
-          </div>
+     )}
 
-          {/* Edit Form or Message */}
-          {editingShoutoutId === shout.id ? (
-            <EditShoutOut
-              currentUser={currentUser}
-              shoutout={shout}
-              onCancel={() => setEditingShoutoutId(null)}
-              onUpdated={fetchShoutouts}
-            />
-          ) : (
-            <>
-              <p className="text-gray-700 my-2">
-                {shout.edited_at && (
-                  <span className="font-semibold text-sm mr-1 text-violet-600">Edited: </span>
-                )}
-                {shout.message}
-              </p>
+    {/* EDIT FORM */}
+    {editingShoutoutId === shout.id && (
+      <EditShoutOut
+        currentUser={currentUser}
+        shoutout={shout}
+        onCancel={() => setEditingShoutoutId(null)}
+        onUpdated={fetchShoutouts}
+      />
+    )}
+  </motion.div>
+))}
 
-              {shout.image_url && (
-                <div className="w-full mt-2 mb-2">
-                  <img
-                    src={shout.image_url}
-                    alt="shoutout"
-                    className="w-full max-w-lg h-auto object-contain rounded-lg shadow-sm"
-                  />
-                </div>
-              )}
-
-              {shout.tagged_users?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {shout.tagged_users.map((u) => (
-                    <div
-                      key={u.id}
-                      className="flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-purple-100"
-                    >
-                      <TargetIcon size={12} className="mr-1 text-gray-700" />
-                      {u.username}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-          {/* Reactions */}
-<div className="mt-4">
-<ReactionBar shoutout={shout} />
-</div>
-
-        </motion.div>
-      ))}
     </div>
   );
 }

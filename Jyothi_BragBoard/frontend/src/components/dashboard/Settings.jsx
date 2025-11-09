@@ -50,7 +50,7 @@ const Settings = ({ currentUser }) => {
         username: name,
         email,
         department,
-        role, // ✅ lowercase is sent to backend
+        role, //  lowercase is sent to backend
       });
 
       localStorage.setItem("current_user", JSON.stringify(updatedUser));

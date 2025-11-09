@@ -134,33 +134,48 @@ class ApiService {
     );
     return res.data;
   }
-  
-  // -------------------- COMMENTS --------------------
-  async addComment(shoutout_id, { user_id, text }) {
-    const res = await axios.post(
-      `${API_BASE_URL}/shoutouts/${shoutout_id}/comments`,
-      { user_id, text },
-      { headers: this.getHeaders() }
-    );
-    return res.data;
-  }
+// --------------------- COMMENTS -------------------------
+async getComments(shoutoutId) {
+  const res = await fetch(`${API_BASE_URL}/comments/${shoutoutId}`, {
+    headers: this.getHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch comments");
+  return res.json();
+}
 
-  async deleteComment(comment_id) {
-    const res = await axios.delete(`${API_BASE_URL}/shoutouts/comments/${comment_id}`, {
-      headers: this.getHeaders(),
-    });
-    return res.data;
-  }
+async addComment(shoutoutId, content) {
+  const res = await fetch(`${API_BASE_URL}/comments/${shoutoutId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...this.getHeaders(),
+    },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error("Failed to add comment");
+  return res.json();
+}
 
-  async updateComment(shoutout_id, comment_id, { text }) {
-    const res = await axios.put(
-      `${API_BASE_URL}/shoutouts/${shoutout_id}/comments/${comment_id}`,
-      { text },
-      { headers: this.getHeaders() }
-    );
-    return res.data;
-  }
-    
+async deleteComment(comment_id) {
+  const res = await fetch(`${API_BASE_URL}/comments/${comment_id}`, {
+    method: "DELETE",
+    headers: this.getHeaders(),
+  });
+  return res.json();
+}
+
+async updateComment(commentId, content) {
+  return fetch(`${API_BASE_URL}/comments/${commentId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...this.getHeaders(),
+    },
+    body: JSON.stringify({ content }),
+  }).then((res) => res.json());
+}
+
+
   // -------------------- UPDATING SHOUTOUT --------------------
   async updateShoutout(shoutout_id, data) {
     const res = await axios.put(`${API_BASE_URL}/shoutouts/${shoutout_id}`, data, {
@@ -206,6 +221,137 @@ async updateUser(userId, updatedData) {
     });
     return res.data;
   }
+
+
+  // -------------------- ADMIN DASHBOARD --------------------
+
+  async getAdminStats() {
+    const res = await axios.get(`${API_BASE_URL}/admin/stats`, {
+      headers: this.getHeaders(),
+    });
+    return res.data;
+  }  
+ 
+  async getTopContributors() {
+    const res = await axios.get(`${API_BASE_URL}/admin/top-contributors`, {
+      headers: this.getHeaders(),
+    });
+    return res.data;
+  }
+
+  async getMostTagged() {
+    const res = await axios.get(`${API_BASE_URL}/admin/most-tagged`, {
+      headers: this.getHeaders(),
+    });
+    return res.data;
+  }
+
+async getTopDepartments(limit = 8) {
+  const res = await axios.get(`${API_BASE_URL}/admin/top-departments?limit=${limit}`, {
+    headers: this.getHeaders(),
+  });
+  return res.data;
 }
 
+async getActivityTrend(days = 30) {
+  const res = await axios.get(`${API_BASE_URL}/admin/activity-trend?days=${days}`, {
+    headers: this.getHeaders(),
+  });
+  return res.data;
+}
+
+  // -------------------- REPORT MANAGEMENT --------------------
+  async reportShoutout(shoutout_id, reason) {
+    const res = await axios.post(
+      `${API_BASE_URL}/shoutouts/report/${shoutout_id}?reason=${encodeURIComponent(reason)}`,
+      {}, // Empty body
+      { headers: this.getHeaders() }
+    );
+    return res.data;
+  }
+  
+  
+
+async getReports(filter = "all") {
+  const res = await axios.get(
+    `${API_BASE_URL}/admin/reports?filter=${filter}`,
+    { headers: this.getHeaders() }
+  );
+  return res.data;
+}
+
+
+async resolveReport(report_id) {
+  const res = await axios.post(
+    `${API_BASE_URL}/admin/reports/${report_id}/resolve`,
+    {},
+    { headers: this.getHeaders() }
+  );
+  return res.data;
+}
+
+async getShoutout(shoutout_id) {
+  const res = await axios.get(
+    `${API_BASE_URL}/shoutouts/${shoutout_id}`,
+    { headers: this.getHeaders() }
+  );
+  return res.data;
+}
+
+// -------------------- ADMIN ACTIONS --------------------
+async adminDeleteShoutout(shoutout_id) {
+  const res = await axios.delete(
+    `${API_BASE_URL}/admin/shoutout/${shoutout_id}/admin-delete`,
+    { headers: this.getHeaders() }
+  );
+  return res.data;
+}
+
+async adminDeleteComment(comment_id) {
+  const res = await axios.delete(
+    `${API_BASE_URL}/admin/comment/${comment_id}`,
+    { headers: this.getHeaders() }
+  );
+  return res.data;
+}
+
+
+// -------------------- EXPORT REPORTS --------------------
+async exportShoutoutsCSV() {
+  const res = await fetch(`${API_BASE_URL}/admin/export/shoutouts/csv`, {
+    headers: this.getHeaders(),
+  });
+
+  if (!res.ok) throw new Error("Failed to export CSV");
+  return res.blob(); // return blob for download
+}
+
+async exportShoutoutsPDF() {
+  const res = await fetch(`${API_BASE_URL}/admin/export/shoutouts/pdf`, {
+    headers: this.getHeaders(),
+  });
+
+  if (!res.ok) throw new Error("Failed to export PDF");
+  return res.blob(); // return blob for download
+}
+
+// -------------------- ACHIEVEMENTS --------------------
+async getAchievements() {
+  const res = await fetch(`${API_BASE_URL}/achievements/`, {
+    headers: this.getHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch achievements");
+  return await res.json();
+}
+
+// -------------------- LEADERBOARD --------------------
+async getLeaderboard(top_n = 10) {
+  const res = await fetch(`${API_BASE_URL}/achievements/leaderboard?top_n=${top_n}`, {
+    headers: this.getHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch leaderboard");
+  return await res.json();
+}
+
+}
 export default new ApiService();

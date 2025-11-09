@@ -102,8 +102,8 @@ const ReactionBar = ({ shoutout }) => {
         const users = reactedUsers[type] || [];
 
         return (
-<div key={type} className="relative group" ref={showPopup === type ? popupRef : null}>
-<motion.button
+          <div key={type} className="relative group" ref={showPopup === type ? popupRef : null}>
+            <motion.button
               onClick={() => handleReaction(type)}
               whileTap={{ scale: 1.35 }}
               transition={{ type: "spring", stiffness: 300 }}
@@ -146,24 +146,23 @@ const ReactionBar = ({ shoutout }) => {
               {label}
             </div>
 
-           {showPopup === type && users.length > 0 && (
-  <div
-    className="bg-gray-50 border border-gray-300 rounded-lg p-2 w-full mt-2 shadow-sm"
-  >
-    {users.map((user, i) => (
-      <div key={i} className="py-1 text-sm last:border-none">
-        <strong>{user.username}</strong>
-        {user.department || user.role ? (
-          <> | {user.department || "N/A"} | {user.role || "N/A"}</>
-        ) : null}
+      {showPopup === type && users.length > 0 && (
+      <div
+           className="bg-gray-50 border border-gray-300 rounded-lg p-2 w-full mt-2 shadow-sm"
+        >
+        {users.map((user, i) => (
+          <div key={i} className="py-1 text-sm last:border-none">
+          <strong>{user.username}</strong>
+          {user.department || user.role ? (
+            <> | {user.department || "N/A"} | {user.role || "N/A"}</>
+          ) : null}
+         </div>
+       ))}
       </div>
-    ))}
-  </div>
-)}
-
-          </div>
-        );
-      })}
+     )}
+    </div>
+  );
+  })}
     </div>
   );
 };

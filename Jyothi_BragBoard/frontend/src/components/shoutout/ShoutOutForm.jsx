@@ -107,7 +107,7 @@ const ShoutOutForm = ({ currentUser, onShoutoutPosted }) => {
 
   return (
         <div className="flex-1 p-6 min-h-screen bg-gradient-to-br from-white via-indigo-50 to-purple-50">
-        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 via-violet-500 to-indigo-500 text-transparent bg-clip-text">
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-700 via-pink-500 to-indigo-500 text-transparent bg-clip-text">
             Create Shout-Out
         </h2>
         <p className="text-gray-500 mb-6">

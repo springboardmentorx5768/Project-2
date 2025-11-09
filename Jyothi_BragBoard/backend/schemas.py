@@ -129,7 +129,8 @@ class ShoutOutResponse(BaseModel):
     edited_at: Optional[datetime] = None
     image_url: Optional[str] = None
     reactions: List[ReactionResponse] = []
-
+    comment_count: int = 0
+    
     model_config = {
         "from_attributes": True
     }
@@ -152,3 +153,22 @@ class DepartmentStats(BaseModel):
         "from_attributes": True
     }
 
+# ===== Comment Schemas =====
+class CommentCreate(BaseModel):
+    content: str
+
+
+class CommentResponse(BaseModel):
+    id: int
+    shoutout_id: int
+    user_id: int
+    username: str
+    department: Optional[str] = None
+    role: Optional[str] = None
+    content: str
+    created_at: datetime
+    edited_at: datetime | None = None
+    is_deleted: bool  
+    model_config = {
+        "from_attributes": True
+    }

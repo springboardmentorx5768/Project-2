@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, Depends
 from database import engine, get_db
-from routers import users, shoutouts, reactions
+from routers import users, shoutouts, reactions,comments, admin, achievements
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database_models import Base
@@ -38,4 +38,8 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(users.router)
 app.include_router(shoutouts.router)
 app.include_router(reactions.router)
+app.include_router(comments.router)
+app.include_router(admin.router)
+app.include_router(achievements.router)
+
 
