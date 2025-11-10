@@ -1,0 +1,128 @@
+.comment-item {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-left: 0;
+
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+
+    .comment-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #4a90e2;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.875rem;
+    }
+
+    .comment-info {
+      flex: 1;
+
+      .comment-author {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.875rem;
+      }
+
+      .comment-date {
+        font-size: 0.75rem;
+        color: #666;
+      }
+    }
+
+    .delete-comment-btn {
+      padding: 0.25rem 0.5rem;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+
+      &:hover {
+        background: #c82333;
+      }
+    }
+  }
+
+  .comment-content {
+    margin-left: 2.75rem;
+    margin-bottom: 0.5rem;
+    color: #333;
+    line-height: 1.5;
+  }
+
+  .comment-actions {
+    margin-left: 2.75rem;
+    margin-bottom: 0.5rem;
+
+    button {
+      padding: 0.25rem 0.5rem;
+      background: transparent;
+      border: none;
+      color: #4a90e2;
+      cursor: pointer;
+      font-size: 0.875rem;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .reply-form {
+    margin-left: 2.75rem;
+    margin-top: 0.5rem;
+
+    textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      resize: vertical;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+
+      &:focus {
+        outline: none;
+        border-color: #4a90e2;
+      }
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.875rem;
+
+      &:hover:not(:disabled) {
+        background: #357abd;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .replies {
+    margin-left: 2rem;
+    margin-top: 1rem;
+    padding-left: 1rem;
+    border-left: 2px solid #ddd;
+  }
+}
+

@@ -1,0 +1,15 @@
+.timeline-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .loading,
+  .empty-state {
+    text-align: center;
+    padding: 1.5rem;
+    color: #6b7280;
+    border-radius: 8px;
+    background: #f9fafb;
+  }
+}
+

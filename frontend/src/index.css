@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "gridjs/dist/theme/mermaid.css";
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap');
+
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: lightblue; /* fallback solid color */
+  background-image: url("https://th.bing.com/th/id/R.37d9c5e34d119e11770f4c744f47658c?rik=0dNF8W2%2bzwFsXg&riu=http%3a%2f%2fwww1.cv-ag.com%2fwp-content%2fuploads%2f2016%2f01%2fbusiness-people-working-together-istock_000017346252medium.jpg&ehk=VgK9hHrREyweK%2buDFv5XA0PyJZy3QvmVKowBA0p2Zlg%3d&risl=&pid=ImgRaw&r=0");
+  background-size: cover;
+  background-position: center;
+}

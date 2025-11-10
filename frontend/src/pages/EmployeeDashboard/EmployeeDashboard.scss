@@ -1,0 +1,27 @@
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+
+  h1 {
+    margin-bottom: 1rem;
+    color: #333;
+  }
+
+  .dashboard-content {
+    margin-top: 2rem;
+
+    .shoutout-section {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+  }
+
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+  }
+}
+

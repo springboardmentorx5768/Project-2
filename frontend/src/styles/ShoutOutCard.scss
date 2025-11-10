@@ -1,0 +1,195 @@
+.shoutout-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-left: 6px solid transparent;
+
+  &.card-timeline {
+    border-left-color: #6366f1;
+  }
+
+  &.card-achievement {
+    border-left-color: #10b981;
+  }
+
+  &.card-team {
+    border-left-color: #f97316;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  .shoutout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #2563eb, #7c3aed);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1rem;
+      }
+
+      .sender-name {
+        font-weight: 600;
+        color: #111827;
+      }
+
+      .timestamp,
+      .event-date {
+        font-size: 0.85rem;
+        color: #6b7280;
+      }
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .category-pill {
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: #e5e7eb;
+        color: #1f2937;
+
+        &.category-timeline {
+          background: #eef2ff;
+          color: #4338ca;
+        }
+
+        &.category-achievement {
+          background: #ecfdf5;
+          color: #047857;
+        }
+
+        &.category-team {
+          background: #fff7ed;
+          color: #c2410c;
+        }
+      }
+
+      button {
+        padding: 0.25rem 0.75rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: background 0.2s ease;
+      }
+
+      .delete-btn {
+        background: #ef4444;
+        color: white;
+
+        &:hover {
+          background: #dc2626;
+        }
+      }
+
+      .report-btn {
+        background: #fbbf24;
+        color: #111827;
+
+        &:hover {
+          background: #f59e0b;
+        }
+      }
+    }
+  }
+
+  .shoutout-content {
+    margin-bottom: 1rem;
+
+    .shoutout-title {
+      margin: 0 0 0.5rem;
+      color: #1f2937;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      color: #374151;
+      white-space: pre-line;
+    }
+
+    .shoutout-image {
+      margin-top: 1rem;
+
+      img {
+        max-width: 100%;
+        border-radius: 10px;
+      }
+    }
+  }
+
+  .shoutout-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+
+    .tag-label {
+      color: #6b7280;
+      margin-right: 0.5rem;
+    }
+
+    .recipient-name {
+      font-weight: 600;
+      color: #2563eb;
+    }
+
+    .department-badge {
+      padding: 0.3rem 0.8rem;
+      background: #f3f4f6;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      color: #4b5563;
+    }
+  }
+
+  .comments-toggle {
+    margin-top: 1rem;
+
+    button {
+      padding: 0.5rem 1.2rem;
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #4b5563;
+      transition: background 0.2s ease, color 0.2s ease;
+
+      &:hover {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+      }
+    }
+  }
+}
