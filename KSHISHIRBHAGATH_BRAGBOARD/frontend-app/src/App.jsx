@@ -14,7 +14,8 @@ const mockUsers = {
       { id: 1, text: 'Top Performer Q2' },
       { id: 2, text: 'Innovation Award' },
     ],
-    score: 1250,
+    score: 1250, // Updated score from activity
+    contribution: 3, // NEW: Score based on comments/reactions/posts
   },
   'jordan@company.com': {
     password: 'password123',
@@ -25,6 +26,7 @@ const mockUsers = {
     avatar: 'https://placehold.co/100x100/2563EB/FFFFFF/png?text=JL',
     achievements: [{ id: 1, text: 'Project Milestone Champion' }],
     score: 850,
+    contribution: 2,
   },
   'taylor@company.com': {
     password: 'password123',
@@ -35,6 +37,7 @@ const mockUsers = {
     avatar: 'https://placehold.co/100x100/4F46E5/FFFFFF/png?text=TQ',
     achievements: [],
     score: 0,
+    contribution: 2,
   },
   'sarah@company.com': {
     password: 'password123',
@@ -45,44 +48,71 @@ const mockUsers = {
     avatar: 'https://placehold.co/100x100/10B981/FFFFFF/png?text=SG',
     achievements: [{ id: 1, text: 'Campaign of the Quarter' }],
     score: 980,
+    contribution: 2,
   },
 };
 
 const mockDepartments = ['All', 'Engineering', 'Marketing', 'Sales', 'HR'];
 
+// --- NEW/UPDATED MOCK SHOUTOUT DATA STRUCTURE ---
 const mockShoutouts = [
   {
     id: 1,
     from: 'Jordan Lee',
+    fromEmail: 'jordan@company.com', // NEW: Added sender email
     to: 'Alex Ray',
+    toEmail: 'alex@company.com', // NEW: Added recipient email
     department: 'Engineering', // Sender's department
     message:
       'Incredible work on the new feature launch! Your dedication was key to our success.',
-    gifUrl: null, // New field for GIF support
-    timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    gifUrl: null,
+    timestamp: new Date(Date.now() - 7200000).toISOString(),
     avatar: 'https://placehold.co/100x100/2563EB/FFFFFF/png?text=JL',
+    reactions: { '👍': ['alex@company.com', 'taylor@company.com'], '👏': ['sarah@company.com'] }, // NEW: Reactions
+    comments: [ // NEW: Comments
+      { id: 101, userId: 'alex@company.com', userName: 'Alex Ray', text: 'Thanks Jordan! Couldn\'t have done it without the team!', timestamp: new Date(Date.now() - 7000000).toISOString(), isReported: false },
+    ],
+    isReported: false, // NEW: Moderation flag
+    reportCount: 0, // NEW
   },
   {
     id: 2,
     from: 'Taylor Quinn',
+    fromEmail: 'taylor@company.com',
     to: 'Sarah Green',
+    toEmail: 'sarah@company.com',
     department: 'HR', // Sender's department
     message:
       'Huge props to Sarah for the amazing new ad campaign. The results are already speaking for themselves!',
     gifUrl: 'https://media.giphy.com/media/l41JRsHHjEwB64TqM/giphy.gif', // Example GIF
     timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
     avatar: 'https://placehold.co/100x100/4F46E5/FFFFFF/png?text=TQ',
+    reactions: { '🔥': ['alex@company.com'], '💯': ['jordan@company.com', 'taylor@company.com'] },
+    comments: [
+      { id: 201, userId: 'sarah@company.com', userName: 'Sarah Green', text: 'You guys are the best!', timestamp: new Date(Date.now() - 85000000).toISOString(), isReported: false },
+    ],
+    isReported: true, // Mock a reported post
+    reportCount: 1,
   },
   {
     id: 3,
     from: 'Alex Ray',
+    fromEmail: 'alex@company.com',
     to: 'Jordan Lee',
+    toEmail: 'jordan@company.com',
     department: 'Engineering', // Sender's department
     message:
       'Thanks for the great leadership and guidance on the project. Really appreciate your support!',
     gifUrl: null,
     timestamp: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
     avatar: 'https://placehold.co/100x100/7E22CE/FFFFFF/png?text=AR',
+    reactions: { '👍': ['jordan@company.com'] },
+    comments: [
+      { id: 301, userId: 'jordan@company.com', userName: 'Jordan Lee', text: 'My pleasure, Alex!', timestamp: new Date(Date.now() - 259000000).toISOString(), isReported: false },
+      { id: 302, userId: 'sarah@company.com', userName: 'Sarah Green', text: 'Awesome teamwork!', timestamp: new Date(Date.now() - 258000000).toISOString(), isReported: true }, // Mock a reported comment
+    ],
+    isReported: false,
+    reportCount: 0,
   },
 ];
 
@@ -129,6 +159,11 @@ const getEmployeeAvatar = (name) => {
     : 'https://placehold.co/100x100/94A3B8/FFFFFF/png?text=?';
 };
 
+const getEmployeeEmailByName = (name) => {
+  const user = allEmployeesData.find((u) => u.name === name);
+  return user ? user.email : null;
+};
+
 // **EDIT 1: NEW UTILITY TO DISPLAY FULL DATE AND TIME** (Retained)
 const formatDateTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -157,7 +192,7 @@ const timeSince = (timestamp) => {
   return `${diffInDays} days ago`;
 };
 
-// --- SVG ICONS (Kept as is) ---
+// --- SVG ICONS (Kept as is + NEW icons) ---
 const RecognitionIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -369,20 +404,6 @@ const MoonIcon = ({ className = 'h-5 w-5' }) => (
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 );
-const EditIcon = ({ className = 'h-5 w-5' }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-  </svg>
-);
 const ImageIcon = ({ className = 'h-5 w-5' }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -436,7 +457,6 @@ const GifIcon = ({ className = 'h-5 w-5' }) => (
   </svg>
 );
 
-// **NEW ICON: CHEVRON RIGHT**
 const ChevronRight = ({ className = 'h-5 w-5' }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -451,6 +471,93 @@ const ChevronRight = ({ className = 'h-5 w-5' }) => (
     className={className}
   >
     <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+);
+
+// --- NEW ICONS FOR MODERATION & SOCIAL ---
+const MessageCircleIcon = ({ className = 'h-5 w-5' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path>
+  </svg>
+);
+const TrashIcon = ({ className = 'h-5 w-5' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  </svg>
+);
+const FlagIcon = ({ className = 'h-5 w-5' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+    <line x1="4" y1="22" x2="4" y2="15"></line>
+  </svg>
+);
+const CheckCircleIcon = ({ className = 'h-5 w-5' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+  </svg>
+);
+const DownloadIcon = ({ className = 'h-5 w-5' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="7 10 12 15 17 10"></polyline>
+    <line x1="12" y1="15" x2="12" y2="3"></line>
   </svg>
 );
 
@@ -496,20 +603,16 @@ const ParticleStyles = () => (
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
-  // **UPDATE: Initial page is now 'landing'**
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'dashboard', 'messages', 'profile', 'admin'
   const [currentUser, setCurrentUser] = useState(null); // Will hold user object on login
   const [error, setError] = useState('');
   const [shoutouts, setShoutouts] = useState(mockShoutouts); // Public Posts
   const [apiUrl, setApiUrl] = useState('http://127.0.0.1:8000');
-
-  // --- NEW: Theme State ---
   const [theme, setTheme] = useState('light'); // 'light' or 'dark'
 
   const toggleTheme = () => {
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   };
-  // -------------------------
 
   const handleLogin = (email, password) => {
     const userKey = Object.keys(mockUsers).find(
@@ -524,7 +627,6 @@ export default function App() {
     }
   };
 
-  // **EDIT 14: REGISTER HANDLER UPDATED TO USE EMAIL AS KEY**
   const handleRegister = (email, password, name) => {
     if (mockUsers[email]) {
       setError('User with this email already exists.');
@@ -532,7 +634,7 @@ export default function App() {
       mockUsers[email] = {
         password,
         name,
-        email, // Store email explicitly
+        email,
         role: 'employee',
         department: 'Unassigned',
         avatar: `https://placehold.co/100x100/CCCCCC/FFFFFF/png?text=${name.substring(
@@ -541,6 +643,7 @@ export default function App() {
         )}`,
         achievements: [],
         score: 0,
+        contribution: 0, // NEW
       };
       setCurrentUser(mockUsers[email]);
       setCurrentPage('dashboard');
@@ -555,22 +658,153 @@ export default function App() {
 
   // --- NEW HANDLER FOR PUBLIC POSTING (Shoutouts) ---
   const handleNewPublicPost = ({ to, message, gifUrl = null }) => {
-    // **EDIT 15: ADD gifUrl PARAMETER**
     const newShoutout = {
       id: Date.now(),
       from: currentUser.name,
+      fromEmail: currentUser.email, // NEW
       to: to,
-      department: currentUser.department, // IMPORTANT: Store sender's department
+      toEmail: getEmployeeEmailByName(to), // NEW
+      department: currentUser.department,
       message: message,
-      gifUrl: gifUrl, // Store GIF URL
+      gifUrl: gifUrl,
       timestamp: new Date().toISOString(),
       avatar: currentUser.avatar,
+      reactions: {}, // NEW
+      comments: [], // NEW
+      isReported: false, // NEW
+      reportCount: 0, // NEW
     };
 
     setShoutouts((prev) => [newShoutout, ...prev]);
+    // Optional: Update contribution score
+    mockUsers[currentUser.email].contribution += 1;
+    setCurrentUser({ ...currentUser, contribution: currentUser.contribution + 1 });
   };
   // -----------------------------------------------------
 
+  // --- NEW: Reaction Handler ---
+  const handleToggleReaction = (shoutoutId, emoji, userEmail) => {
+    setShoutouts((prevShoutouts) =>
+      prevShoutouts.map((shoutout) => {
+        if (shoutout.id === shoutoutId) {
+          const newReactions = { ...shoutout.reactions };
+          const users = newReactions[emoji] || [];
+          const userIndex = users.indexOf(userEmail);
+
+          if (userIndex > -1) {
+            // Remove reaction
+            users.splice(userIndex, 1);
+            if (users.length === 0) {
+              delete newReactions[emoji];
+            }
+            // Update contribution score (Decrement)
+            mockUsers[userEmail].contribution -= 1;
+          } else {
+            // Add reaction
+            if (!newReactions[emoji]) {
+              newReactions[emoji] = [];
+            }
+            newReactions[emoji].push(userEmail);
+            // Update contribution score (Increment)
+            mockUsers[userEmail].contribution += 1;
+          }
+
+          // Update current user if it's their reaction
+          if (userEmail === currentUser.email) {
+            setCurrentUser({ ...currentUser, contribution: mockUsers[userEmail].contribution });
+          }
+
+          return { ...shoutout, reactions: newReactions };
+        }
+        return shoutout;
+      })
+    );
+  };
+
+  // --- NEW: Comment Handler ---
+  const handleAddComment = (shoutoutId, text, user) => {
+    if (!text.trim()) return;
+
+    const newComment = {
+      id: Date.now(),
+      userId: user.email,
+      userName: user.name,
+      text: text,
+      timestamp: new Date().toISOString(),
+      isReported: false,
+    };
+
+    setShoutouts((prevShoutouts) =>
+      prevShoutouts.map((shoutout) => {
+        if (shoutout.id === shoutoutId) {
+          // Update contribution score
+          mockUsers[user.email].contribution += 1;
+          if (user.email === currentUser.email) {
+            setCurrentUser({ ...currentUser, contribution: mockUsers[user.email].contribution });
+          }
+          return { ...shoutout, comments: [...shoutout.comments, newComment] };
+        }
+        return shoutout;
+      })
+    );
+  };
+
+  // --- NEW: Moderation Handlers ---
+  const handleDeletePost = (shoutoutId) => {
+    if (window.confirm('Are you sure you want to delete this shoutout? This action cannot be undone.')) {
+      setShoutouts((prevShoutouts) => prevShoutouts.filter((s) => s.id !== shoutoutId));
+    }
+  };
+
+  const handleDeleteComment = (shoutoutId, commentId) => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      setShoutouts((prevShoutouts) =>
+        prevShoutouts.map((shoutout) => {
+          if (shoutout.id === shoutoutId) {
+            return {
+              ...shoutout,
+              comments: shoutout.comments.filter((c) => c.id !== commentId),
+            };
+          }
+          return shoutout;
+        })
+      );
+    }
+  };
+
+  const handleReportPost = (shoutoutId) => {
+    setShoutouts((prevShoutouts) =>
+      prevShoutouts.map((shoutout) => {
+        if (shoutout.id === shoutoutId) {
+          // Prevent multiple reports
+          if (shoutout.isReported) return shoutout;
+          alert('Shoutout reported successfully! Admins will review it.');
+          return { ...shoutout, isReported: true, reportCount: shoutout.reportCount + 1 };
+        }
+        return shoutout;
+      })
+    );
+  };
+
+  const handleResolveReport = (shoutoutId, action) => {
+    // action: 'keep' or 'delete'
+    if (action === 'delete') {
+      handleDeletePost(shoutoutId);
+      alert('Report resolved: Post deleted.');
+    } else {
+      setShoutouts((prevShoutouts) =>
+        prevShoutouts.map((shoutout) => {
+          if (shoutout.id === shoutoutId) {
+            alert('Report resolved: Post marked as safe.');
+            return { ...shoutout, isReported: false, reportCount: 0 };
+          }
+          return shoutout;
+        })
+      );
+    }
+  };
+
+  // --- Page Renderer ---
   const renderPage = () => {
     if (currentPage === 'landing') {
       return <LandingPage onNavigateToLogin={() => setCurrentPage('login')} />;
@@ -603,6 +837,11 @@ export default function App() {
             setCurrentPage={setCurrentPage}
             theme={theme}
             toggleTheme={toggleTheme}
+            handleToggleReaction={handleToggleReaction} // NEW
+            handleAddComment={handleAddComment} // NEW
+            handleDeletePost={handleDeletePost} // NEW
+            handleDeleteComment={handleDeleteComment} // NEW
+            handleReportPost={handleReportPost} // NEW
           />
         );
       }
@@ -621,12 +860,12 @@ export default function App() {
         return (
           <ProfilePage
             user={currentUser}
-            setCurrentUser={setCurrentUser} // **EDIT 16: Pass setCurrentUser for profile updates**
-            onLogout={handleLogout} // **EDIT 17: Pass onLogout for password reset mock**
+            setCurrentUser={setCurrentUser}
+            onLogout={handleLogout}
             apiUrl={apiUrl}
             setApiUrl={setApiUrl}
             theme={theme}
-            toggleTheme={toggleTheme} // **EDIT 18: Pass toggleTheme for the button**
+            toggleTheme={toggleTheme}
           />
         );
       }
@@ -638,8 +877,12 @@ export default function App() {
               (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
             )}
             theme={theme}
+            handleResolveReport={handleResolveReport} // NEW
+            handleDeletePost={handleDeletePost} // NEW
+            handleDeleteComment={handleDeleteComment} // NEW
+            mockUsers={mockUsers} // NEW for analytics
           />
-        ); // Admin's dashboard is reused for now
+        );
       }
     }
 
@@ -665,6 +908,7 @@ export default function App() {
 // --- NEW LANDING PAGE ---
 // ----------------------------------------------------------------------
 function LandingPage({ onNavigateToLogin }) {
+  // ... (LandingPage component content remains unchanged)
   return (
     <div className="flex flex-col items-center justify-center min-h-screen animated-bg p-8">
       <div className="text-center text-white p-6 max-w-2xl">
@@ -714,7 +958,6 @@ function LandingPage({ onNavigateToLogin }) {
 // --- AUTH PAGES (Glassmorphism) ---
 // ----------------------------------------------------------------------
 const AuthLayout = ({ title, children, isLoginPage = false }) => (
-  // **EDIT 19: Use glass-card class and portrait-like aspect for max-w-sm**
   <div
     className={`flex items-center justify-center min-h-screen animated-bg p-4`}
   >
@@ -722,7 +965,6 @@ const AuthLayout = ({ title, children, isLoginPage = false }) => (
       <div className="text-center">
         <div className="flex justify-center items-center mb-4">
           <RecognitionIcon className="text-white" />
-          {/* **EDIT 2: UPDATE APP NAME TO BRAGBOARD** */}
           <h1 className="text-2xl font-bold text-white">Bragboard</h1>
         </div>
         <h2 className="text-3xl font-extrabold text-white">{title}</h2>
@@ -742,7 +984,6 @@ function LoginPage({ onLogin, onNavigateToRegister, error }) {
     onLogin(email, password);
   };
 
-  // **EDIT 20: Updated input styles for glassmorphism**
   const inputClass =
     'w-full pl-10 pr-3 py-3 border border-white/30 rounded-lg focus:ring-2 focus:ring-white focus:border-white transition bg-white/10 text-white placeholder-white/70';
   const buttonClass =
@@ -819,7 +1060,6 @@ function RegisterPage({ onRegister, onNavigateToLogin, error }) {
     onRegister(email, password, name);
   };
 
-  // **EDIT 21: Updated input styles for glassmorphism**
   const inputClass =
     'w-full pl-10 pr-3 py-3 border border-white/30 rounded-lg focus:ring-2 focus:ring-white focus:border-white transition bg-white/10 text-white placeholder-white/70';
   const buttonClass =
@@ -890,7 +1130,10 @@ function Dashboard({
   shoutouts,
   setCurrentPage,
   theme,
-  toggleTheme,
+  handleToggleReaction,
+  handleAddComment,
+  handleDeletePost,
+  handleReportPost,
 }) {
   const sortedShoutouts = [...shoutouts].sort(
     (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
@@ -912,12 +1155,21 @@ function Dashboard({
             user={user}
             shoutouts={sortedShoutouts}
             theme={theme}
+            handleResolveReport={() => alert('Navigate to Admin Analytics to resolve reports.')}
+            handleDeletePost={handleDeletePost}
+            handleToggleReaction={handleToggleReaction}
+            handleAddComment={handleAddComment}
+            handleReportPost={handleReportPost}
+            mockUsers={mockUsers} // Passing mockUsers for admin context
           />
         ) : (
           <EmployeeDashboard
             user={user}
             shoutouts={sortedShoutouts}
             theme={theme}
+            handleToggleReaction={handleToggleReaction} // NEW
+            handleAddComment={handleAddComment} // NEW
+            handleReportPost={handleReportPost} // NEW
           />
         )}
       </main>
@@ -925,27 +1177,54 @@ function Dashboard({
   );
 }
 
-// **EDIT 22: REMOVED ThemeToggle from Sidebar**
 const Sidebar = ({ user, onLogout, currentPage, setCurrentPage, theme }) => {
   // Theme-dependent classes
   const sidebarBg =
     theme === 'dark' ? 'bg-gray-900 text-gray-100' : 'bg-white shadow-lg';
   const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-b';
-  const navTextColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
-  const navHoverBg =
-    theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100';
-  const navActiveBg =
-    theme === 'dark' ? 'bg-gray-700 text-white' : 'text-gray-900 bg-gray-200';
-  const profileText = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
+  const navTextColor = theme === 'dark' ? 'text-gray-200' : 'text-gray-600';
+  const navHoverBg = theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
+  const navActiveBg = theme === 'dark' ? 'bg-indigo-800/50' : 'bg-indigo-100';
   const profileSubText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+
+  const NavItem = ({
+    title,
+    page,
+    currentPage,
+    setCurrentPage,
+    icon,
+    navTextColor,
+    navHoverBg,
+    navActiveBg,
+    isAdminOnly = false,
+  }) => {
+    if (isAdminOnly && user.role !== 'admin') {
+      return null;
+    }
+    return (
+      <button
+        onClick={() => setCurrentPage(page)}
+        className={`flex items-center w-full px-4 py-3 rounded-xl transition duration-200 ${
+          currentPage === page
+            ? `${navActiveBg} text-indigo-500 font-semibold`
+            : `${navTextColor} ${navHoverBg}`
+        }`}
+      >
+        {icon}
+        <span className="text-sm">{title}</span>
+      </button>
+    );
+  };
 
   return (
     <aside className={`w-64 flex flex-col ${sidebarBg}`}>
+      {/* App Header */}
       <div className={`flex items-center justify-center p-6 ${borderColor}`}>
         <RecognitionIcon />
-        {/* **EDIT 4: UPDATE APP NAME TO BRAGBOARD IN SIDEBAR** */}
         <h1 className="text-xl font-bold ml-2">Bragboard</h1>
       </div>
+
+      {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2">
         <NavItem
           title="Dashboard"
@@ -985,18 +1264,6 @@ const Sidebar = ({ user, onLogout, currentPage, setCurrentPage, theme }) => {
           navHoverBg={navHoverBg}
           navActiveBg={navActiveBg}
         />
-        {user.role === 'admin' && (
-          <NavItem
-            title="Analytics"
-            page="analytics"
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            icon={<ChartIcon />}
-            navTextColor={navTextColor}
-            navHoverBg={navHoverBg}
-            navActiveBg={navActiveBg}
-          />
-        )}
         <NavItem
           title="Profile"
           page="profile"
@@ -1007,24 +1274,39 @@ const Sidebar = ({ user, onLogout, currentPage, setCurrentPage, theme }) => {
           navHoverBg={navHoverBg}
           navActiveBg={navActiveBg}
         />
+        <NavItem
+          title="Admin Analytics"
+          page="analytics"
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          icon={<ChartIcon />}
+          navTextColor={navTextColor}
+          navHoverBg={navHoverBg}
+          navActiveBg={navActiveBg}
+          isAdminOnly={true}
+        />
       </nav>
-      <div className={`p-4 ${borderColor}`}>
-        <div className="flex items-center">
+
+      {/* User Info & Logout */}
+      <div className={`p-4 border-t ${borderColor}`}>
+        <div className="flex items-center mb-4">
           <img
             src={user.avatar}
-            alt="User Avatar"
-            className="h-10 w-10 rounded-full object-cover"
+            alt={user.name}
+            className="h-10 w-10 rounded-full object-cover mr-3 border-2 border-indigo-500"
           />
-          <div className="ml-3">
-            <p className={`font-semibold text-sm ${profileText}`}>
-              {user.name}
-            </p>
-            <p className={`text-xs ${profileSubText}`}>{user.department}</p>
+          <div>
+            <p className="font-semibold text-sm">{user.name}</p>
+            <p className={`text-xs ${profileSubText}`}>{user.email}</p>
           </div>
         </div>
         <button
           onClick={onLogout}
-          className="w-full mt-4 flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          className={`flex items-center justify-center w-full px-4 py-2 rounded-lg text-sm font-medium transition ${
+            theme === 'dark'
+              ? 'bg-gray-800 text-red-400 hover:bg-gray-700'
+              : 'bg-red-50 text-red-600 hover:bg-red-100'
+          }`}
         >
           <LogoutIcon />
           <span className="ml-2">Logout</span>
@@ -1034,43 +1316,18 @@ const Sidebar = ({ user, onLogout, currentPage, setCurrentPage, theme }) => {
   );
 };
 
-// NavItem kept as is
-const NavItem = ({
-  title,
-  page,
-  currentPage,
-  setCurrentPage,
-  icon,
-  navTextColor,
-  navHoverBg,
-  navActiveBg,
-}) => (
-  <button
-    onClick={() => setCurrentPage(page)}
-    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors duration-150 ${
-      currentPage === page
-        ? navActiveBg + ' font-semibold'
-        : navTextColor + ' ' + navHoverBg
-    }`}
-  >
-    {icon}
-    {title}
-  </button>
-);
-
-// --- UTILITY COMPONENTS ---
 const DashboardHeader = ({ title, subtitle, theme }) => {
-  const titleColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
-  const subtitleColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+  const textPrimary = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
   return (
-    <div className="mb-8">
-      <h1 className={`text-4xl font-bold ${titleColor}`}>{title}</h1>
-      <p className={`${subtitleColor} mt-1`}>{subtitle}</p>
-    </div>
+    <header className="mb-8">
+      <h1 className={`text-3xl font-extrabold ${textPrimary}`}>{title}</h1>
+      <p className={`mt-1 text-base ${textSecondary}`}>{subtitle}</p>
+    </header>
   );
 };
 
-const DashboardCard = ({ children, className = '', theme }) => {
+const DashboardCard = ({ children, theme, className = '' }) => {
   const cardBg = theme === 'dark' ? 'bg-gray-700' : 'bg-white';
   const shadow = theme === 'dark' ? 'shadow-xl' : 'shadow-md';
   return (
@@ -1080,39 +1337,210 @@ const DashboardCard = ({ children, className = '', theme }) => {
   );
 };
 
-// **UPGRADE: Shoutout component updated to display sender's department**
-const ShoutoutItem = ({ shoutout, theme }) => {
-  const { from, to, message, timestamp, avatar, gifUrl, department } = shoutout;
+// --- NEW: Reaction Buttons Component ---
+const ReactionButtons = ({ shoutout, userEmail, handleToggleReaction, theme }) => {
+  const commonReactions = ['👍', '👏', '🔥', '💯', '❤️'];
+  const textPrimary = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
+
+  return (
+    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+      {commonReactions.map((emoji) => {
+        const users = shoutout.reactions[emoji] || [];
+        const count = users.length;
+        const hasReacted = users.includes(userEmail);
+
+        return (
+          <button
+            key={emoji}
+            onClick={() => handleToggleReaction(shoutout.id, emoji, userEmail)}
+            className={`flex items-center px-2 py-1 text-xs rounded-full transition ${
+              hasReacted
+                ? 'bg-indigo-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+            }`}
+          >
+            <span className="mr-1">{emoji}</span>
+            <span className={`font-semibold ${count > 0 ? textPrimary : 'text-gray-400'}`}>
+              {count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// --- NEW: Comment Item Component ---
+const CommentItem = ({ comment, shoutoutId, user, theme, handleDeleteComment }) => {
+  const subText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+  const isAdminOrOwner = user.role === 'admin' || user.email === comment.userId;
+  const commentBg = theme === 'dark' ? 'bg-gray-900/50' : 'bg-white';
+
+  return (
+    <div className={`flex items-start p-3 rounded-lg ${commentBg}`}>
+      <img
+        src={getEmployeeAvatar(comment.userName)}
+        alt={comment.userName}
+        className="h-7 w-7 rounded-full object-cover mr-3"
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm">
+          <span className="font-semibold text-indigo-500">{comment.userName}</span>
+          <span className={`text-xs ml-2 ${subText}`}>{timeSince(comment.timestamp)}</span>
+        </p>
+        <p className={`text-sm ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} break-words`}>
+          {comment.text}
+        </p>
+      </div>
+      {isAdminOrOwner && (
+        <button
+          onClick={() => handleDeleteComment(shoutoutId, comment.id)}
+          className="ml-2 text-red-500 hover:text-red-700 p-1 rounded-full"
+          title="Delete Comment"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+};
+
+// --- NEW: Comment System Component ---
+const CommentSystem = ({ shoutout, user, theme, handleAddComment, handleDeleteComment }) => {
+  const [commentText, setCommentText] = useState('');
+  const subText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+
+  const handlePostComment = () => {
+    if (commentText.trim()) {
+      handleAddComment(shoutout.id, commentText, user);
+      setCommentText('');
+    }
+  };
+
+  const inputClasses =
+    theme === 'dark'
+      ? 'bg-gray-700 text-gray-100 border-gray-600 focus:ring-indigo-500'
+      : 'bg-white text-gray-800 border-gray-300 focus:ring-indigo-500';
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-3">
+      <h5 className={`text-sm font-semibold ${subText} flex items-center`}>
+        <MessageCircleIcon className="h-4 w-4 mr-1" />
+        Comments ({shoutout.comments.length})
+      </h5>
+      <div className="space-y-2 max-h-48 overflow-y-auto">
+        {shoutout.comments.slice().reverse().map((comment) => (
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            shoutoutId={shoutout.id}
+            user={user}
+            theme={theme}
+            handleDeleteComment={handleDeleteComment}
+          />
+        ))}
+        {shoutout.comments.length === 0 && (
+          <p className={`text-xs text-center p-2 ${subText}`}>No comments yet.</p>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input
+          type="text"
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
+          placeholder="Add a comment..."
+          className={`flex-1 p-2 text-sm border rounded-lg focus:ring-2 ${inputClasses}`}
+        />
+        <button
+          onClick={handlePostComment}
+          disabled={!commentText.trim()}
+          className={`p-2 rounded-full transition ${
+            commentText.trim()
+              ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          title="Post Comment"
+        >
+          <SendIcon />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+// **UPGRADE: Shoutout component updated to display sender's department and new social features**
+const ShoutoutItem = ({
+  shoutout,
+  user,
+  theme,
+  handleToggleReaction,
+  handleAddComment,
+  handleDeletePost,
+  handleDeleteComment,
+  handleReportPost,
+  isAdminView = false, // NEW prop for Admin Dashboard
+}) => {
+  const { from, to, message, timestamp, avatar, gifUrl, department, fromEmail, isReported } = shoutout;
   const shoutoutBg = theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50';
   const textPrimary = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
   const subText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
 
+  const isAuthor = user.email === fromEmail;
+  const isAdmin = user.role === 'admin';
+
   return (
     <div
-      className={`flex flex-col p-4 ${shoutoutBg} rounded-lg shadow-sm transition-all duration-300 hover:shadow-lg`}
+      className={`flex flex-col p-4 ${shoutoutBg} rounded-lg shadow-sm transition-all duration-300 hover:shadow-lg ${isReported && isAdminView ? 'border-4 border-red-500' : ''}`}
     >
-      <div className="flex items-start">
-        <img
-          src={avatar}
-          alt={from}
-          className="h-10 w-10 rounded-full mr-4 object-cover border-2 border-indigo-400"
-        />
-        <div className="flex-1">
-          {/* NEW: Display Department */}
-          <p
-            className={`text-xs font-semibold uppercase tracking-wider mb-1 ${subText}`}
-          >
-            {department}
-          </p>
-          <p className="text-sm">
-            <span className="font-semibold text-indigo-500">{from}</span> gave a
-            shoutout to <span className={`font-bold ${textPrimary}`}>{to}</span>
-          </p>
-          <p className={`${textPrimary} mt-2`}>{message}</p>
-          {/* **EDIT 5/11: USE ABSOLUTE DATE/TIME FOR OLD MESSAGES** */}
-          <small className={`${subText} block mt-2`}>
-            {formatDateTime(timestamp)}
-          </small>
+      <div className="flex items-start justify-between">
+        <div className="flex items-start flex-1 min-w-0">
+          <img
+            src={avatar}
+            alt={from}
+            className="h-10 w-10 rounded-full mr-4 object-cover border-2 border-indigo-400"
+          />
+          <div className="flex-1 min-w-0">
+            <p
+              className={`text-xs font-semibold uppercase tracking-wider mb-1 ${subText}`}
+            >
+              {department}
+              {isReported && <span className="ml-2 text-red-500 font-bold"> - REPORTED</span>}
+            </p>
+            <p className="text-sm">
+              <span className="font-semibold text-indigo-500">{from}</span> gave a
+              shoutout to{' '}
+              <span className={`font-bold ${textPrimary}`}>{to}</span>
+            </p>
+            <p className={`${textPrimary} mt-2 break-words`}>{message}</p>
+            <small className={`${subText} block mt-2`}>
+              {formatDateTime(timestamp)}
+            </small>
+          </div>
+        </div>
+        {/* Post Actions (Delete/Report) */}
+        <div className="ml-4 flex space-x-2">
+          {(isAuthor || isAdmin) && handleDeletePost && (
+            <button
+              onClick={() => handleDeletePost(shoutout.id)}
+              className="p-1 text-red-500 hover:text-red-700 rounded-full"
+              title="Delete Post"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
+          )}
+          {!isAuthor && !isAdmin && handleReportPost && (
+            <button
+              onClick={() => handleReportPost(shoutout.id)}
+              className="p-1 text-yellow-500 hover:text-yellow-700 rounded-full"
+              title="Report Post"
+              disabled={isReported}
+            >
+              <FlagIcon className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
       {/* Display GIF if present */}
@@ -1126,21 +1554,34 @@ const ShoutoutItem = ({ shoutout, theme }) => {
           />
         </div>
       )}
+
+      {/* --- NEW: Reactions and Comments --- */}
+      <ReactionButtons
+        shoutout={shoutout}
+        userEmail={user.email}
+        handleToggleReaction={handleToggleReaction}
+        theme={theme}
+      />
+
+      <CommentSystem
+        shoutout={shoutout}
+        user={user}
+        theme={theme}
+        handleAddComment={handleAddComment}
+        handleDeleteComment={handleDeleteComment}
+      />
     </div>
   );
 };
 
 // --- EMPLOYEE DASHBOARD (Updated to use theme-aware components) ---
-function EmployeeDashboard({ user, shoutouts, theme }) {
-  // Only shows the 5 most recent shoutouts on the main dashboard feed for simplicity
+function EmployeeDashboard({ user, shoutouts, theme, handleToggleReaction, handleAddComment, handleReportPost }) {
   const recentFeed = shoutouts.slice(0, 5);
 
-  // Sort employees by score for Leaderboard (descending)
   const leaderboard = allEmployeesData
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .filter((e) => e.role === 'employee')
+    .sort((a, b) => b.score - a.score); // Keep main score for leaderboard
 
-  // Theme-dependent classes
   const textPrimary = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
   const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
   const subText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
@@ -1148,31 +1589,26 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
   return (
     <>
       <DashboardHeader
-        title={`Welcome, ${user.name}!`}
-        subtitle="View the latest company shoutouts and your standing."
+        title="Welcome to Bragboard!"
+        subtitle={`Your personal score: ${user.score} points. Contribution Score: ${user.contribution}`}
         theme={theme}
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* User Score Card */}
-        <DashboardCard
-          className="md:col-span-1 flex flex-col justify-between"
-          theme={theme}
-        >
-          <h3
-            className={`text-xl font-bold ${textPrimary} mb-4 flex items-center`}
-          >
-            <TrophyIcon /> Your Recognition Score
-          </h3>
-          <div className="text-center my-6">
-            <p className="text-6xl font-extrabold text-indigo-500">
-              {user.score}
-            </p>
-            <p className={`${subText} mt-1`}>Total Points</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {/* User Info & Achievements */}
+        <DashboardCard className="md:col-span-1" theme={theme}>
+          <div className="text-center mb-4">
+            <img
+              src={user.avatar}
+              alt="User Avatar"
+              className="h-16 w-16 rounded-full object-cover mx-auto mb-3 border-4 border-indigo-500 shadow-lg"
+            />
+            <h3 className={`text-xl font-bold ${textPrimary}`}>{user.name}</h3>
+            <p className={`text-sm ${subText}`}>{user.department} Dept.</p>
           </div>
           <div
-            className={`border-t ${
+            className={`pt-4 border-t ${
               theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
-            } pt-4`}
+            }`}
           >
             <h4 className={`font-semibold ${textSecondary} mb-2`}>
               Recent Achievements:
@@ -1181,8 +1617,7 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
               {user.achievements.length > 0 ? (
                 user.achievements.map((ach) => (
                   <li key={ach.id} className="flex items-center">
-                    <span className="text-indigo-500 mr-2">•</span>
-                    {ach.text}
+                    <span className="text-indigo-500 mr-2">•</span> {ach.text}
                   </li>
                 ))
               ) : (
@@ -1193,7 +1628,7 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
         </DashboardCard>
 
         {/* Public Shoutout Feed */}
-        <DashboardCard className="md:col-span-2" theme={theme}>
+        <DashboardCard className="md:col-span-2 lg:col-span-2" theme={theme}>
           <h3
             className={`text-xl font-bold ${textPrimary} mb-4 border-b ${
               theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
@@ -1207,7 +1642,12 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
                 <ShoutoutItem
                   key={shoutout.id}
                   shoutout={shoutout}
+                  user={user}
                   theme={theme}
+                  handleToggleReaction={handleToggleReaction}
+                  handleAddComment={handleAddComment}
+                  handleReportPost={handleReportPost}
+                  handleDeleteComment={alert} // Placeholder, can be passed if needed on employee side
                 />
               ))
             ) : (
@@ -1219,7 +1659,7 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
         </DashboardCard>
 
         {/* Leaderboard */}
-        <DashboardCard className="md:col-span-3" theme={theme}>
+        <DashboardCard className="md:col-span-3 lg:col-span-1" theme={theme}>
           <h3
             className={`text-xl font-bold ${textPrimary} mb-4 border-b ${
               theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
@@ -1256,21 +1696,14 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
                   />
                   <div>
                     <p className={`font-semibold ${textPrimary}`}>{emp.name}</p>
-                    <p
-                      className={`text-xs ${
-                        theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'
-                      }`}
-                    >
-                      {emp.department}
-                    </p>
+                    <p className={`text-xs ${subText}`}>{emp.department}</p>
                   </div>
                 </div>
-                <div
-                  className={`text-lg font-bold ${
-                    theme === 'dark' ? 'text-indigo-300' : 'text-indigo-800'
-                  }`}
-                >
-                  {emp.score} pts
+                <div className="flex items-center">
+                  <TrophyIcon />
+                  <span className={`font-bold ml-1 ${textPrimary}`}>
+                    {emp.score}
+                  </span>
                 </div>
               </li>
             ))}
@@ -1281,56 +1714,189 @@ function EmployeeDashboard({ user, shoutouts, theme }) {
   );
 }
 
-// --- ADMIN DASHBOARD (Kept as is, using ShoutoutItem) ---
-function AdminDashboard({ user, shoutouts, theme }) {
-  // Theme-dependent classes
+// --- ADMIN DASHBOARD (Enhanced for Moderation & Analytics) ---
+function AdminDashboard({
+  user,
+  shoutouts,
+  theme,
+  handleResolveReport,
+  handleDeletePost,
+  handleDeleteComment,
+  handleToggleReaction,
+  handleAddComment,
+  handleReportPost,
+  mockUsers,
+}) {
   const textPrimary = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
   const subText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+
+  // --- Aggregated data for analytics ---
+  const totalShoutouts = shoutouts.length;
+  const topRecipients = shoutouts.reduce((acc, shoutout) => {
+    acc[shoutout.to] = (acc[shoutout.to] || 0) + 1;
+    return acc;
+  }, {});
+  const topRecipientName = Object.keys(topRecipients).reduce((a, b) =>
+    (topRecipients[a] > topRecipients[b] ? a : b)
+  , 'N/A');
+
+  const topContributors = Object.values(mockUsers)
+    .sort((a, b) => b.contribution - a.contribution)
+    .slice(0, 3); // Get top 3 by new contribution score
+
+  const reportedPosts = shoutouts.filter(s => s.isReported);
+
+  // --- Export Reports Mock ---
+  const handleExport = (format) => {
+    alert(`Generating ${format} report for all shoutouts... (Mock functionality)`);
+  };
 
   return (
     <>
       <DashboardHeader
-        title={`Admin Panel - Welcome, ${user.name}!`}
-        subtitle="Overview of company recognition and analytics."
+        title="Admin Analytics & Moderation"
+        subtitle="Overview of company recognition and platform usage."
         theme={theme}
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Example Admin Metric Card */}
-        <DashboardCard className="md:col-span-1" theme={theme}>
-          <h3 className={`text-xl font-bold ${textPrimary} mb-4`}>
+
+      {/* Analytics Widgets */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <DashboardCard theme={theme}>
+          <h3 className={`text-lg font-semibold ${textSecondary} mb-2`}>
             Total Shoutouts
           </h3>
-          <p className="text-6xl font-extrabold text-green-500">
-            {shoutouts.length}
+          <p className={`text-4xl font-extrabold ${textPrimary}`}>
+            {totalShoutouts}
           </p>
-          <p className={`${subText} mt-1`}>Since last quarter</p>
         </DashboardCard>
-
-        {/* Admin Feed */}
-        <DashboardCard className="md:col-span-2" theme={theme}>
-          <h3
-            className={`text-xl font-bold ${textPrimary} mb-4 border-b ${
-              theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
-            } pb-2`}
-          >
-            All Public Shoutout Feed
+        <DashboardCard theme={theme}>
+          <h3 className={`text-lg font-semibold ${textSecondary} mb-2`}>
+            Most Recognized
           </h3>
-          <div className="space-y-4 max-h-[500px] overflow-y-auto">
-            {shoutouts.map((shoutout) => (
-              <ShoutoutItem
+          <p className={`text-2xl font-extrabold text-indigo-500`}>
+            {topRecipientName}
+          </p>
+          <p className={`text-sm ${subText}`}>
+            {topRecipients[topRecipientName] || 0} shoutouts received
+          </p>
+        </DashboardCard>
+        <DashboardCard theme={theme}>
+          <h3 className={`text-lg font-semibold ${textSecondary} mb-2`}>
+            Top Contributor
+          </h3>
+          <p className={`text-2xl font-extrabold text-green-500`}>
+            {topContributors.length > 0 ? topContributors[0].name : 'N/A'}
+          </p>
+          <p className={`text-sm ${subText}`}>
+            {topContributors.length > 0 ? topContributors[0].contribution : 0} total interactions
+          </p>
+        </DashboardCard>
+      </div>
+
+      {/* Moderation Queue */}
+      <DashboardCard theme={theme} className="mb-8">
+        <h3
+          className={`text-xl font-bold ${textPrimary} mb-4 border-b ${
+            theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+          } pb-3 flex items-center`}
+        >
+          <FlagIcon className="h-6 w-6 mr-2 text-red-500" />
+          Moderation Queue ({reportedPosts.length} Reported Posts)
+        </h3>
+        {reportedPosts.length > 0 ? (
+          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+            {reportedPosts.map((shoutout) => (
+              <div
                 key={shoutout.id}
-                shoutout={shoutout}
-                theme={theme}
-              />
+                className={`p-4 rounded-lg border-2 border-red-500 ${theme === 'dark' ? 'bg-gray-800' : 'bg-red-50'}`}
+              >
+                <ShoutoutItem
+                  shoutout={shoutout}
+                  user={user}
+                  theme={theme}
+                  handleToggleReaction={handleToggleReaction}
+                  handleAddComment={handleAddComment}
+                  handleDeletePost={handleDeletePost}
+                  handleDeleteComment={handleDeleteComment}
+                  handleReportPost={handleReportPost}
+                  isAdminView={true}
+                />
+                <div className="flex justify-end space-x-2 mt-4 pt-3 border-t border-red-200 dark:border-red-800">
+                  <button
+                    onClick={() => handleResolveReport(shoutout.id, 'keep')}
+                    className="flex items-center px-4 py-2 text-sm font-semibold rounded-lg bg-green-500 text-white hover:bg-green-600 transition"
+                  >
+                    <CheckCircleIcon className="h-4 w-4 mr-1" /> Resolve & Keep
+                  </button>
+                  <button
+                    onClick={() => handleResolveReport(shoutout.id, 'delete')}
+                    className="flex items-center px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                  >
+                    <TrashIcon className="h-4 w-4 mr-1" /> Delete Post
+                  </button>
+                </div>
+              </div>
             ))}
-            {shoutouts.length === 0 && (
-              <p className={`text-center ${subText} pt-10`}>
-                No public posts yet.
+            {reportedPosts.some(s => s.comments.some(c => c.isReported)) && (
+              <p className={`text-sm ${subText} mt-2`}>
+                *Note: Some comments within non-reported posts may also be reported (not fully implemented in this view, rely on Delete Comment button in all posts for full moderation).
               </p>
             )}
           </div>
-        </DashboardCard>
-      </div>
+        ) : (
+          <p className={`text-center ${subText} pt-5`}>
+            The moderation queue is clear. Great job!
+          </p>
+        )}
+      </DashboardCard>
+
+      {/* All Shoutout Feed & Export */}
+      <DashboardCard theme={theme}>
+        <div className="flex justify-between items-center mb-4">
+          <h3
+            className={`text-xl font-bold ${textPrimary} border-b ${
+              theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+            } pb-2`}
+          >
+            All Public Shoutouts (Full Feed)
+          </h3>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleExport('PDF')}
+              className="flex items-center px-3 py-1 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+            >
+              <DownloadIcon className="h-4 w-4 mr-1" /> Export PDF
+            </button>
+            <button
+              onClick={() => handleExport('CSV')}
+              className="flex items-center px-3 py-1 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
+            >
+              <DownloadIcon className="h-4 w-4 mr-1" /> Export CSV
+            </button>
+          </div>
+        </div>
+        <div className="space-y-4 max-h-[800px] overflow-y-auto">
+          {shoutouts.map((shoutout) => (
+             <ShoutoutItem
+              key={shoutout.id}
+              shoutout={shoutout}
+              user={user}
+              theme={theme}
+              handleToggleReaction={handleToggleReaction}
+              handleAddComment={handleAddComment}
+              handleDeletePost={handleDeletePost}
+              handleDeleteComment={handleDeleteComment} // Admin can delete any comment here
+              handleReportPost={handleReportPost}
+            />
+          ))}
+          {shoutouts.length === 0 && (
+            <p className={`text-center ${subText} pt-10`}>
+              No public posts yet.
+            </p>
+          )}
+        </div>
+      </DashboardCard>
     </>
   );
 }
@@ -1377,8 +1943,8 @@ const EmojiPicker = ({ onSelect, theme }) => {
     </div>
   );
 };
-// -----------------------------------------------------------
 
+// -----------------------------------------------------------
 // **EDIT 24: GIF PICKER COMPONENT**
 const GifPicker = ({ onSelect, theme, onClose }) => {
   const bg = theme === 'dark' ? 'bg-gray-700' : 'bg-white';
@@ -1403,29 +1969,27 @@ const GifPicker = ({ onSelect, theme, onClose }) => {
             src={gif.url}
             alt={gif.alt}
             onClick={() => onSelect(gif.url)}
-            className={`w-full h-auto rounded-lg object-cover cursor-pointer border-2 border-transparent transition ${hoverBorder}`}
+            className={`w-full h-auto rounded-lg cursor-pointer object-cover border-2 border-transparent transition ${hoverBorder}`}
             loading="lazy"
           />
         ))}
       </div>
       <button
         onClick={onClose}
-        className={`w-full mt-3 text-sm py-1 rounded ${
+        className={`mt-3 w-full text-sm font-medium rounded-lg py-1 transition ${
           theme === 'dark'
-            ? 'text-gray-300 hover:text-white'
-            : 'text-gray-600 hover:text-gray-800'
+            ? 'bg-gray-600 text-gray-200 hover:bg-gray-500'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
         }`}
       >
-        Cancel
+        Close
       </button>
     </div>
   );
 };
 // -----------------------------------------------------------
 
-// ----------------------------------------------------------------------
-// --- PUBLIC POST PAGE (Updated with Emoji and GIF Feature) ---
-// ----------------------------------------------------------------------
+// --- PUBLIC POSTING PAGE ---
 function PublicPostPage({
   user,
   setCurrentPage,
@@ -1433,14 +1997,48 @@ function PublicPostPage({
   handleNewPost,
   theme,
 }) {
+  // Local state for the form
+  const [recipient, setRecipient] = useState('All'); // 'All' for public, or employee name
   const [currentMessage, setCurrentMessage] = useState('');
   const [showEmployeeList, setShowEmployeeList] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false); // **EDIT 25: NEW STATE FOR GIF PICKER**
-  const [selectedGif, setSelectedGif] = useState(null); // **EDIT 26: NEW STATE FOR SELECTED GIF**
-  const [recipient, setRecipient] = useState('All');
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
+  const [selectedGif, setSelectedGif] = useState(null);
+
   const inputRef = useRef(null);
 
+  // Filter employees for the mention/recipient list
+  const filteredEmployees = allEmployees.filter(
+    (name) => name !== user.name // Cannot send a shoutout to self
+  );
+
+  const handleSend = () => {
+    if (!currentMessage.trim() && !selectedGif) {
+      alert('Message or GIF is required.');
+      return;
+    }
+
+    let finalRecipient = recipient;
+
+    // Call the global handler
+    handleNewPost({
+      to: finalRecipient,
+      message: currentMessage,
+      gifUrl: selectedGif, // Pass selected GIF
+    });
+
+    // Reset form state
+    setCurrentMessage('');
+    setRecipient('All');
+    setSelectedGif(null);
+    setIsEmojiPickerOpen(false);
+    setIsGifPickerOpen(false);
+
+    // Navigate back to the dashboard or stay on page
+    setCurrentPage('dashboard');
+  };
+
+  // Sort by date descending
   const sortedShoutouts = [...shoutouts].sort(
     (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
   );
@@ -1451,13 +2049,9 @@ function PublicPostPage({
   const textPrimary = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
   const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
   const subText = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
-  const postBg = theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50';
   const popupBg =
-    theme === 'dark'
-      ? 'bg-gray-700 border-gray-600'
-      : 'bg-white border-gray-200';
-  const popupHover =
-    theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-indigo-50';
+    theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200';
+  const popupHover = theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-indigo-50';
   const textAreaClasses =
     theme === 'dark'
       ? 'bg-gray-700 text-gray-100 border-gray-600 focus:ring-indigo-500'
@@ -1474,7 +2068,7 @@ function PublicPostPage({
     // Close pickers when typing
     setIsEmojiPickerOpen(false);
     setIsGifPickerOpen(false);
-    setSelectedGif(null); // Clear selected GIF if user starts typing a new message
+    // setSelectedGif(null); // Clear selected GIF if user starts typing a new message - maybe keep it unless they change recipient
 
     if (value.includes('@') && !value.endsWith(' ')) {
       setShowEmployeeList(true);
@@ -1489,7 +2083,6 @@ function PublicPostPage({
     inputRef.current.focus();
   };
 
-  // **EDIT 27: HANDLER FOR GIF SELECTION**
   const handleSelectGif = (url) => {
     setSelectedGif(url);
     setIsGifPickerOpen(false);
@@ -1503,31 +2096,16 @@ function PublicPostPage({
 
     let newMessage = currentMessage;
     if (newRecipient !== 'All') {
-      const lastAt = currentMessage.lastIndexOf('@');
-      if (lastAt !== -1) {
-        newMessage = currentMessage.substring(0, lastAt) + `@${employeeName} `;
-      } else {
-        newMessage += `@${employeeName} `;
+      // Replace the mention trigger (@...) with the full name
+      const atIndex = currentMessage.lastIndexOf('@');
+      if (atIndex !== -1) {
+        newMessage =
+          currentMessage.substring(0, atIndex) + `${employeeName} `;
       }
     }
-
     setCurrentMessage(newMessage);
     setShowEmployeeList(false);
     inputRef.current.focus();
-  };
-
-  const handleSend = () => {
-    if (!currentMessage.trim() && !selectedGif) return;
-
-    handleNewPost({
-      to: recipient,
-      message: currentMessage.trim(),
-      gifUrl: selectedGif, // Pass selected GIF URL
-    });
-
-    setCurrentMessage('');
-    setSelectedGif(null); // Clear GIF after sending
-    setRecipient('All');
   };
 
   return (
@@ -1541,22 +2119,25 @@ function PublicPostPage({
       />
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         <DashboardHeader
-          title="Public Recognition & Congratulations"
-          subtitle="Post a public message, emoji, or GIF to recognize a colleague's efforts."
+          title="Post a Shoutout"
+          subtitle="Give public recognition to a peer or the whole company!"
           theme={theme}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Post/Compose Area */}
-          <div className="lg:col-span-2 space-y-6">
-            <DashboardCard className="h-full flex flex-col" theme={theme}>
-              <h3 className={`text-xl font-bold ${textPrimary} mb-4`}>
-                Post to Public Feed
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Post Creation Column */}
+          <div className="lg:col-span-2 space-y-4">
+            <DashboardCard theme={theme}>
+              <h3
+                className={`text-2xl font-bold ${textPrimary} mb-4 flex items-center`}
+              >
+                <SendIcon />
+                <span className="ml-2">Create New Post</span>
               </h3>
 
-              <div className="mb-4">
-                <label
-                  className={`block text-sm font-medium ${textSecondary} mb-1`}
-                >
+              {/* Recipient Selector */}
+              <div className="mb-6">
+                <label className={`block text-sm font-medium ${textSecondary} mb-2`}>
                   Recipient:
                 </label>
                 <div className="flex items-center space-x-4">
@@ -1593,7 +2174,7 @@ function PublicPostPage({
                       handleSend();
                     }
                   }}
-                  placeholder={`Write your congratulation or message here... (Type @ to mention an employee)`}
+                  placeholder={`Write your congratulation or message here... (Hit enter to send or type @ to mention an employee)`}
                   className={`w-full p-3 pr-24 rounded-xl resize-none focus:ring-2 ${textAreaClasses}`}
                   rows="5"
                 ></textarea>
@@ -1632,7 +2213,7 @@ function PublicPostPage({
                     >
                       Select Employee
                     </p>
-                    {allEmployees
+                    {filteredEmployees
                       .filter((name) =>
                         name
                           .toLowerCase()
@@ -1640,12 +2221,13 @@ function PublicPostPage({
                             currentMessage.toLowerCase().split('@').pop().trim()
                           )
                       )
-                      .filter((name) => name !== user.name)
                       .map((name) => (
-                        <div
+                        <button
                           key={name}
                           onClick={() => handleSelectEmployee(name)}
-                          className={`p-2 ${popupHover} cursor-pointer text-sm flex items-center ${textPrimary}`}
+                          className={`flex items-center w-full p-2 text-sm text-left transition ${popupHover} ${
+                            recipient === name ? 'bg-indigo-100 dark:bg-indigo-900/50' : ''
+                          }`}
                         >
                           <img
                             src={getEmployeeAvatar(name)}
@@ -1653,51 +2235,46 @@ function PublicPostPage({
                             className="h-6 w-6 rounded-full mr-2"
                           />
                           {name}
-                        </div>
+                        </button>
                       ))}
-                    <div
-                      onClick={() => handleSelectEmployee('All')}
-                      className={`p-2 ${popupHover} cursor-pointer text-sm font-bold text-indigo-500 border-t ${
-                        theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
-                      }`}
-                    >
-                      All (Public Post)
-                    </div>
+                    {filteredEmployees.filter((name) =>
+                      name
+                        .toLowerCase()
+                        .includes(
+                          currentMessage.toLowerCase().split('@').pop().trim()
+                        )
+                    ).length === 0 && (
+                      <p className={`p-2 text-sm ${subText}`}>
+                        No employee found.
+                      </p>
+                    )}
                   </div>
                 )}
 
-                {/* Send Button, Emoji Button, and GIF Button Container */}
-                <div className="absolute right-2 bottom-2 flex space-x-2">
-                  {/* **EDIT 28: GIF TOGGLE BUTTON** */}
+                {/* Action Buttons */}
+                <div className="absolute right-3 bottom-3 flex space-x-2">
                   <button
-                    onClick={() => {
-                      setIsGifPickerOpen((prev) => !prev);
-                      setIsEmojiPickerOpen(false); // Close other picker
-                    }}
-                    className={`p-2 rounded-full transition ${
-                      isGifPickerOpen ? buttonActive : buttonInactive
+                    onClick={() => setIsGifPickerOpen((prev) => !prev)}
+                    className={`h-9 w-9 flex items-center justify-center rounded-full transition ${
+                      isGifPickerOpen
+                        ? buttonActive
+                        : selectedGif
+                        ? 'text-white bg-indigo-500 hover:bg-indigo-600'
+                        : buttonInactive
                     }`}
                     title="Insert GIF"
                   >
                     <GifIcon />
                   </button>
-                  {/* END GIF TOGGLE BUTTON */}
-
-                  {/* **EDIT 9: EMOJI TOGGLE BUTTON** */}
                   <button
-                    onClick={() => {
-                      setIsEmojiPickerOpen((prev) => !prev);
-                      setIsGifPickerOpen(false); // Close other picker
-                    }}
-                    className={`p-2 rounded-full transition ${
+                    onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                    className={`h-9 w-9 flex items-center justify-center rounded-full transition ${
                       isEmojiPickerOpen ? buttonActive : buttonInactive
                     }`}
                     title="Insert Emoji"
                   >
-                    😊
+                    <span className="text-xl">😊</span>
                   </button>
-                  {/* END EMOJI TOGGLE BUTTON */}
-
                   <button
                     onClick={handleSend}
                     className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition"
@@ -1708,11 +2285,10 @@ function PublicPostPage({
                   </button>
                 </div>
 
-                {/* **EDIT 10: EMOJI PICKER POPUP** */}
                 {isEmojiPickerOpen && (
                   <EmojiPicker onSelect={handleSelectEmoji} theme={theme} />
                 )}
-                {/* **EDIT 29: GIF PICKER POPUP** */}
+
                 {isGifPickerOpen && (
                   <GifPicker
                     onSelect={handleSelectGif}
@@ -1736,7 +2312,13 @@ function PublicPostPage({
               </h3>
               <ul className="space-y-4">
                 {recentlyPosted.map((post) => (
-                  <ShoutoutItem key={post.id} shoutout={post} theme={theme} />
+                  <div key={post.id} className="p-2 border-b last:border-b-0 border-gray-200 dark:border-gray-600">
+                    <p className={`text-sm ${textPrimary}`}>
+                      <span className="font-semibold text-indigo-500">{post.from}</span> to{' '}
+                      <span className="font-bold">{post.to}</span>
+                    </p>
+                    <p className={`text-xs ${subText} truncate`}>{post.message}</p>
+                  </div>
                 ))}
                 {recentlyPosted.length === 0 && (
                   <li className={subText}>No recent public posts.</li>
@@ -1776,32 +2358,29 @@ const ProfileThemeToggle = ({ theme, toggleTheme }) => {
   );
 };
 
-// --- PROFILE PAGE (Updated with Editing and Theme Toggle) ---
+// --- PROFILE PAGE (Settings) ---
 function ProfilePage({
   user,
   setCurrentUser,
   onLogout,
   apiUrl,
   setApiUrl,
+  setCurrentPage,
   theme,
   toggleTheme,
 }) {
-  // Local state for editing profile
+  // Mock state for editing fields
   const [editingName, setEditingName] = useState(user.name);
   const [editingEmail, setEditingEmail] = useState(user.email);
   const [editingAvatar, setEditingAvatar] = useState(user.avatar);
-  const [isEditing, setIsEditing] = useState(false); // Retained for future/more complex logic, though not directly used in the current mock handlers
   const [newApiUrl, setNewApiUrl] = useState(apiUrl);
 
-  // **UPGRADE: Use a local state object for the mock users to force a re-render in App.jsx**
-  // In a real app, this state would not be necessary, as the parent's mockUsers would update an API/DB.
-  // Since we are mocking, we need a way to track the mutable mockUsers object changes.
-  const [mockStateUsers, setMockStateUsers] = useState(mockUsers);
+  // NOTE: This uses the mockUsers object directly to persist changes across the application mock.
+  const [mockStateUsers, setMockStateUsers] = useState(mockUsers); // State to trigger re-render if mockUsers is modified
 
-  const handleUpdateProfile = (field) => {
-    // Mock update: In a real app, this would be an API call
-
-    // Find the current user key (email) in mockUsers
+  const handleSave = (field) => {
+    // 1. Update the object in mockUsers
+    // Find the key in mockUsers
     const userKey = Object.keys(mockUsers).find(
       (key) => mockUsers[key].email === user.email // Use user.email as key finder, it's more reliable
     );
@@ -1821,7 +2400,6 @@ function ProfilePage({
         alert('Error: Email already in use in mock data.');
         return;
       }
-
       const oldUser = mockUsers[userKey];
       delete mockUsers[userKey]; // Delete the old key
       mockUsers[editingEmail] = { ...oldUser, email: editingEmail }; // Create new user with new email as key
@@ -1836,10 +2414,7 @@ function ProfilePage({
     }
 
     // Force an update to the local state to trigger any dependent components if needed (not strictly needed here but good practice in a mock)
-    setMockStateUsers({ ...mockUsers });
-
-    // Simulate successful save
-    setIsEditing(false);
+    setMockStateUsers({ ...mockUsers }); // Simulate successful save
   };
 
   const handlePasswordReset = () => {
@@ -1866,18 +2441,18 @@ function ProfilePage({
       ? 'bg-gray-800 text-gray-100 border-gray-600 focus:ring-indigo-500'
       : 'bg-white text-gray-800 border-gray-300 focus:ring-indigo-500';
 
-  // **EDIT 31: Helper component for editable fields**
+  // Helper component for editable fields
   const EditableField = ({
     label,
     value,
     onValueChange,
     onSave,
+    isDirty,
     icon,
+    fieldKey,
     type = 'text',
   }) => {
-    const fieldKey = label.toLowerCase().replace(/\s/g, ''); // e.g., 'Avatar URL' -> 'avatarurl'
-    const isDirty =
-      value !== user[fieldKey === 'avatarurl' ? 'avatar' : fieldKey]; // Check against the actual user prop key
+    // Use user prop here for accurate dirty check against the actual user prop key
     const fieldId = `edit-${fieldKey}`;
 
     return (
@@ -1929,7 +2504,6 @@ function ProfilePage({
             subtitle="Manage your personal information and application settings."
             theme={theme}
           />
-          {/* **EDIT 32: Place Theme Toggle on Profile Page** */}
           <ProfileThemeToggle theme={theme} toggleTheme={toggleTheme} />
         </div>
 
@@ -1942,27 +2516,40 @@ function ProfilePage({
               className="h-24 w-24 rounded-full object-cover mx-auto mb-4 border-4 border-indigo-500 shadow-lg"
             />
             <h3 className={`text-2xl font-bold ${textPrimary}`}>{user.name}</h3>
-            <p className="text-indigo-500 font-medium mb-4">
-              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+            <p className={`text-sm ${textSecondary}`}>{user.department}</p>
+            <p className={`text-xs mt-1 ${textSecondary}`}>
+              Role: {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
             </p>
 
             <div
-              className={`text-left space-y-2 mt-6 p-4 rounded-lg ${subCardBg}`}
+              className={`mt-6 pt-6 border-t ${
+                theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+              }`}
             >
-              <p className={`text-sm ${textSecondary} flex items-center`}>
-                <UserIcon className="h-4 w-4 mr-2 text-indigo-500" />
-                <span className="font-semibold">Department:</span>{' '}
-                {user.department}
+              <p className={`text-xl font-bold text-yellow-500 mb-2 flex items-center justify-center`}>
+                <TrophyIcon className="h-6 w-6 mr-1" />
+                {user.score} Points
               </p>
-              <p className={`text-sm ${textSecondary} flex items-center`}>
-                <TrophyIcon className="h-4 w-4 mr-2 text-yellow-500" />
-                <span className="font-semibold">Total Score:</span> {user.score}{' '}
-                pts
+              <p className={`text-xs ${textSecondary}`}>
+                Your total recognition score.
+              </p>
+            </div>
+            <div
+              className={`mt-4 pt-4 border-t ${
+                theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+              }`}
+            >
+              <p className={`text-xl font-bold text-indigo-500 mb-2 flex items-center justify-center`}>
+                <MessageCircleIcon className="h-6 w-6 mr-1" />
+                {user.contribution} Interactions
+              </p>
+              <p className={`text-xs ${textSecondary}`}>
+                Total reactions, comments, and posts.
               </p>
             </div>
           </DashboardCard>
 
-          {/* Settings and Editing Section */}
+          {/* Account Settings (Edits) */}
           <div className="lg:col-span-2 space-y-8">
             <DashboardCard theme={theme}>
               <div
@@ -1970,57 +2557,63 @@ function ProfilePage({
                   theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
                 } pb-3`}
               >
-                <SettingsIcon />
+                <ProfileIcon />
                 <h3 className={`text-xl font-bold ${textPrimary} ml-2`}>
-                  Account & Personal Information
+                  Account Information
                 </h3>
               </div>
-
               <div className="space-y-4">
-                {/* **EDIT 33: Name Edit** */}
                 <EditableField
-                  label="Name"
+                  label="Full Name"
                   value={editingName}
                   onValueChange={setEditingName}
-                  onSave={() => handleUpdateProfile('name')}
-                  icon={<EditIcon className="h-4 w-4 text-indigo-500" />}
+                  onSave={() => handleSave('name')}
+                  isDirty={editingName !== user.name}
+                  icon={<UserIcon className="h-5 w-5" />}
+                  fieldKey="name"
                 />
-                {/* **EDIT 34: Email Edit** */}
                 <EditableField
-                  label="Email"
+                  label="Email Address"
                   value={editingEmail}
                   onValueChange={setEditingEmail}
-                  onSave={() => handleUpdateProfile('email')}
-                  icon={<SendIcon className="h-4 w-4 text-indigo-500" />}
-                  type="email"
+                  onSave={() => handleSave('email')}
+                  isDirty={editingEmail !== user.email}
+                  icon={<UserIcon className="h-5 w-5" />}
+                  fieldKey="email"
                 />
-                {/* **EDIT 35: Avatar Edit** */}
                 <EditableField
                   label="Avatar URL"
                   value={editingAvatar}
                   onValueChange={setEditingAvatar}
-                  onSave={() => handleUpdateProfile('avatar')}
-                  icon={<ImageIcon className="h-4 w-4 text-indigo-500" />}
-                  type="url"
+                  onSave={() => handleSave('avatar')}
+                  isDirty={editingAvatar !== user.avatar}
+                  icon={<ImageIcon className="h-5 w-5" />}
+                  fieldKey="avatar"
                 />
+              </div>
+            </DashboardCard>
 
-                {/* **EDIT 36: Password Reset Mock** */}
-                <div
-                  className={`p-4 rounded-lg ${subCardBg} flex justify-between items-center`}
+            <DashboardCard theme={theme}>
+              <div
+                className={`flex items-center mb-4 border-b ${
+                  theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+                } pb-3`}
+              >
+                <KeyIcon />
+                <h3 className={`text-xl font-bold ${textPrimary} ml-2`}>
+                  Security Settings
+                </h3>
+              </div>
+              <div className="p-4 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-between">
+                <p className={`text-sm font-medium text-red-700 dark:text-red-300`}>
+                  Need to update your password?
+                </p>
+                <button
+                  onClick={handlePasswordReset}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
                 >
-                  <div className="flex items-center">
-                    <KeyIcon className="h-5 w-5 mr-3 text-red-500" />
-                    <p className={`font-medium ${textPrimary}`}>
-                      Reset Password
-                    </p>
-                  </div>
-                  <button
-                    onClick={handlePasswordReset}
-                    className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition text-sm"
-                  >
-                    Reset & Logout
-                  </button>
-                </div>
+                  Reset Password
+                </button>
               </div>
             </DashboardCard>
 
@@ -2043,12 +2636,17 @@ function ProfilePage({
                   type="url"
                   value={newApiUrl}
                   onChange={(e) => setNewApiUrl(e.target.value)}
-                  placeholder="Enter API URL"
-                  className={`flex-1 p-3 border rounded-lg focus:ring-2 ${inputClasses}`}
+                  placeholder="e.g., http://your-backend.com"
+                  className={`flex-1 p-2 border rounded-lg focus:ring-2 ${inputClasses}`}
                 />
                 <button
                   onClick={handleSaveApiUrl}
-                  className="bg-green-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-green-700 transition"
+                  disabled={newApiUrl === apiUrl || !newApiUrl}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
+                    newApiUrl !== apiUrl && newApiUrl
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   Save URL
                 </button>
